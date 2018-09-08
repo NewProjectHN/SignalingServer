@@ -8,18 +8,18 @@
 </head>
 <body>
   <div ng-app="myApp" ng-controller="myCtrl" class="container">
-    <div class="home-wrapper" ng-show="!join">
+    <div class="home-wrapper">
         <div class="row">
           <div class="col-md-4 col-12">Your Name:</div>
           <div class="col-md-4 col-12"><input ng-model="name" /></div>
           <div class="col-md-4 col-12"><input type="button" value="JOIN" ng-click="joinRoom()"/></div>
         </div>
     </div>
-    <div class="content-wrapper row" ng-show="join">
+    <div class="content-wrapper row">
         <div>Xin chao:{{name}}</div>
-        <div class="full-view"><video autoplay id="selfView" /></div>
-        <div class="thump-wrapper" ng-repeat="friend in friends">
-            <div class="thump-item">{{friend.name}}</div>
+        <div class="full-view"><video autoplay id="selfView" src=""/></div>
+        <div class="videos-container">
+
         </div>
     </div>
   </div>

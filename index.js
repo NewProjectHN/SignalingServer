@@ -2,9 +2,16 @@
 var express = require('express');
 var app = express();
 var path = require('path');
-var server = require('http').createServer(app);
-var io = require('socket.io')(server);
+
+
+var fs = require('fs');
+var httpsOptions = {
+  key: fs.readFileSync('./fake-keys/privatekey.pem'),
+  cert: fs.readFileSync('./fake-keys/certificate.pem')
+};
 var port = process.env.PORT || 3000;
+var server = require('https').createServer(httpsOptions,app);
+var io = require('socket.io')(server);
 
 // var router = express.Router();
 //

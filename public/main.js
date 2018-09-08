@@ -226,3 +226,25 @@ app.controller('myCtrl', function($scope) {
       }
     }
 });
+
+window.onFriendCallback = (socketId, stream) => {
+  // let friend = friends.filter(friend => friend.socketId == socketId)[0];
+  // console.log("OnFriendCallback: ", friends);
+  let thumbnailElement = document.createElement("div");
+  thumbnailElement.className = "video-thumbnail";
+  thumbnailElement.style = "width: 30%";
+  thumbnailElement.id = "friend-" + 1;
+
+  let videoElement = document.createElement('video');
+  videoElement.className = "video thumbnail";
+  videoElement.autoplay = 'autoplay';
+  videoElement.src = URL.createObjectURL(stream);
+  thumbnailElement.appendChild(videoElement);
+
+  let nameElement = document.createElement("div");
+  nameElement.className = "name";
+  nameElement.innerText = "123";
+  thumbnailElement.appendChild(nameElement);
+
+  document.getElementsByClassName("videos-container")[0].appendChild(thumbnailElement);
+}

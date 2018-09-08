@@ -1,3 +1,4 @@
+
 var app = angular.module('myApp', []);
 app.controller('myCtrl', function($scope) {
     $scope.join = false;
@@ -50,7 +51,7 @@ app.controller('myCtrl', function($scope) {
       peerConnections[socketId] = retVal;
 
       retVal.onicecandidate = function (event) {
-        console.log('onicecandidate', event);
+        console.log((new Date()).getTime() + 'onicecandidate', event);
         if (event.candidate) {
           socket.emit('exchange', {'to': socketId, 'candidate': event.candidate });
         }
@@ -58,34 +59,34 @@ app.controller('myCtrl', function($scope) {
 
       function createOffer() {
         retVal.createOffer(function(desc) {
-          console.log('createOffer', desc);
+          console.log((new Date()).getTime() + 'createOffer', desc);
           retVal.setLocalDescription(desc, function () {
-            console.log('setLocalDescription', retVal.localDescription);
-            socket.emit('exchange', {'to': socketId, 'sdp': retVal.localDescription });
+            console.log((new Date()).getTime() + 'setLocalDescription', retVal.localDescription);
+            socket.emit((new Date()).getTime() + 'exchange', {'to': socketId, 'sdp': retVal.localDescription });
           }, logError);
         }, logError);
       }
 
       retVal.onnegotiationneeded = function () {
-        console.log('onnegotiationneeded');
+        console.log((new Date()).getTime() + 'onnegotiationneeded');
         if (isOffer) {
           createOffer();
         }
       }
 
       retVal.oniceconnectionstatechange = function(event) {
-        console.log('oniceconnectionstatechange', event);
+        console.log((new Date()).getTime() + 'oniceconnectionstatechange', event);
         if (event.target.iceConnectionState === 'connected') {
           createDataChannel();
         }
       };
 
       retVal.onsignalingstatechange = function(event) {
-        console.log('onsignalingstatechange', event);
+        console.log((new Date()).getTime() + 'onsignalingstatechange', event);
       };
 
       retVal.onaddstream = function (event) {
-        console.log('onaddstream', event);
+        console.log((new Date()).getTime() + 'onaddstream', event);
         //var element = document.createElement('video');
         //element.id = "remoteView" + socketId;
         //element.autoplay = 'autoplay';
@@ -105,22 +106,22 @@ app.controller('myCtrl', function($scope) {
         var dataChannel = retVal.createDataChannel("text");
 
         dataChannel.onerror = function (error) {
-          console.log("dataChannel.onerror", error);
+          console.log((new Date()).getTime() + "dataChannel.onerror", error);
         };
 
         dataChannel.onmessage = function (event) {
-          console.log("dataChannel.onmessage:", event.data);
+          console.log((new Date()).getTime() + "dataChannel.onmessage:", event.data);
           if(window.onDataChannelMessage != null) {
             window.onDataChannelMessage(JSON.parse(event.data));
           }
         };
 
         dataChannel.onopen = function () {
-          console.log('dataChannel.onopen');
+          console.log((new Date()).getTime() + 'dataChannel.onopen');
         };
 
         dataChannel.onclose = function () {
-          console.log("dataChannel.onclose");
+          console.log((new Date()).getTime() + "dataChannel.onclose");
         };
 
         retVal.textDataChannel = dataChannel;
@@ -146,25 +147,25 @@ app.controller('myCtrl', function($scope) {
       }
 
       if (data.sdp) {
-        console.log('exchange sdp', data);
+        console.log((new Date()).getTime() + 'exchange sdp', data);
         pc.setRemoteDescription(new RTCSessionDescription(data.sdp), function () {
           if (pc.remoteDescription.type == "offer")
           pc.createAnswer(function(desc) {
-            console.log('createAnswer', desc);
+            console.log((new Date()).getTime() + 'createAnswer', desc);
             pc.setLocalDescription(desc, function () {
-              console.log('setLocalDescription', pc.localDescription);
-              socket.emit('exchange', {'to': fromId, 'sdp': pc.localDescription });
+              console.log((new Date()).getTime() + 'setLocalDescription', pc.localDescription);
+              socket.emit((new Date()).getTime() + 'exchange', {'to': fromId, 'sdp': pc.localDescription });
             }, logError);
           }, logError);
         }, logError);
       } else {
-        console.log('exchange candidate', data);
+        console.log((new Date()).getTime() + 'exchange----candidate', data.candidate);
         pc.addIceCandidate(new RTCIceCandidate(data.candidate));
       }
     }
 
     function leave(socketId) {
-      console.log('leave', socketId);
+      console.log((new Date()).getTime() + 'leave', socketId);
       var pc = peerConnections[socketId];
       pc.close();
       delete peerConnections[socketId];
@@ -174,6 +175,7 @@ app.controller('myCtrl', function($scope) {
     }
 
     socket.on('exchange', function(data){
+      console.log((new Date()).getTime() + " - exchange-from-server:", data);
       exchange(data);
     });
 
@@ -207,6 +209,7 @@ app.controller('myCtrl', function($scope) {
 
     function loadLocalStream(muted) {
       navigator.getUserMedia({ "audio": true, "video": false }, function (stream) {
+        console.log((new Date()).getTime() + 'loadLocalStream');
         localStream = stream;
         var selfView = document.getElementById("selfView");
         selfView.src = URL.createObjectURL(stream);

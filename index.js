@@ -30,7 +30,7 @@ var mapRoomName = {};
 io.on('connection', (socket) => {
 
   // when the client emits 'new message', this listens and executes
-  console.log('CONNECT-id:'+socket.id)
+  console.log((new Date()).getTime() + 'CONNECT-id:'+socket.id)
   socket.on('join', (data,fn) => {
     // we tell the client to execute 'new message'
     var roomId = data.roomId;
@@ -39,7 +39,7 @@ io.on('connection', (socket) => {
     socket.roomID = roomId;
     mapRoomName[roomId] = name;
     socket.join(roomId);
-    console.log('join-id:'+socket.id)
+    console.log((new Date()).getTime() + 'join-id:'+socket.id)
     var socketIds = socketIdsInRoom(roomId);
     let friends = socketIds.map((socketId) => {
       return {
@@ -61,11 +61,14 @@ io.on('connection', (socket) => {
   socket.on('exchange', (data) => {
     // we tell the client to execute 'new message'
 
-    console.log('exchange-id'+socket.id);
+    console.log((new Date()).getTime() + 'exchange-id'+socket.id);
     console.log(data);
 
     var to = io.sockets.connected[data.to];
-    socket.emit('exchange',{from:socket.id,sdp:data.sdp,candidate:data.candidate});
+    if(to != undefined){
+      to.emit('exchange',{from:socket.id,sdp:data.sdp,candidate:data.candidate});
+    }
+
     // socket.emit('join success',arr);
   });
 

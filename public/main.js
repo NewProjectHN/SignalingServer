@@ -62,7 +62,7 @@ app.controller('myCtrl', function($scope) {
           console.log((new Date()).getTime() + 'createOffer', desc);
           retVal.setLocalDescription(desc, function () {
             console.log((new Date()).getTime() + 'setLocalDescription', retVal.localDescription);
-            socket.emit((new Date()).getTime() + 'exchange', {'to': socketId, 'sdp': retVal.localDescription });
+            socket.emit('exchange', {'to': socketId, 'sdp': retVal.localDescription });
           }, logError);
         }, logError);
       }
@@ -154,7 +154,7 @@ app.controller('myCtrl', function($scope) {
             console.log((new Date()).getTime() + 'createAnswer', desc);
             pc.setLocalDescription(desc, function () {
               console.log((new Date()).getTime() + 'setLocalDescription', pc.localDescription);
-              socket.emit((new Date()).getTime() + 'exchange', {'to': fromId, 'sdp': pc.localDescription });
+              socket.emit('exchange', {'to': fromId, 'sdp': pc.localDescription });
             }, logError);
           }, logError);
         }, logError);

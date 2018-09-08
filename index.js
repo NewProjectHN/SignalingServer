@@ -25,90 +25,83 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 var numUsers = 0;
 var socketList = [];
+var mapRoomName = {};
 
 io.on('connection', (socket) => {
 
   // when the client emits 'new message', this listens and executes
-  socket.on('join', (roomID,fn) => {
+  console.log('CONNECT-id:'+socket.id)
+  socket.on('join', (data,fn) => {
     // we tell the client to execute 'new message'
-    console.log(fn);
-    console.log('room id:'+roomID)
-    socket.roomID = roomID;
-    socketList.push(roomID);
-    fn(socketList);
+    var roomId = data.roomId;
+    var name = data.name;
 
-    socket.emit('connect');
+    socket.roomID = roomId;
+    mapRoomName[roomId] = name;
+    socket.join(roomId);
+    console.log('join-id:'+socket.id)
+    var socketIds = socketIdsInRoom(roomId);
+    let friends = socketIds.map((socketId) => {
+      return {
+        socketId: socketId,
+        name: mapRoomName[socketId]
+      }
+    }).filter((friend) => friend.socketId != socket.id);
+    console.log("friend:"+friends.length);
+    fn(friends);
+    //broadcast
+    // friends.forEach((friend) => {
+    //   io.sockets.connected[friend.socketId].emit("join", {
+    //     socketId: socket.id, name
+    //   });
+    // });
     // socket.emit('join success',arr);
   });
 
   socket.on('exchange', (data) => {
     // we tell the client to execute 'new message'
-    console.log(data.to);
-    console.log(data.candidate);
-    console.log()
+
+    console.log('exchange-id'+socket.id);
+    console.log(data);
 
     var to = io.sockets.connected[data.to];
-    socket.emit('exchange',{from:socket.roomID,sdp:data.sdp});
+    socket.emit('exchange',{from:socket.id,sdp:data.sdp,candidate:data.candidate});
     // socket.emit('join success',arr);
   });
 
   var addedUser = false;
 
-  // when the client emits 'new message', this listens and executes
-  socket.on('new message', (data) => {
-    // we tell the client to execute 'new message'
-    socket.broadcast.emit('new message', {
-      username: socket.username,
-      message: data
-    });
-  });
-
-  // when the client emits 'add user', this listens and executes
-  socket.on('add_user', (username,fn) => {
-    console.log(fn);
-    if (addedUser) return;
-    // fn('1234');
-    // we store the username in the socket session for this client
-    socket.username = username;
-    ++numUsers;
-    addedUser = true;
-    socket.emit('login', {
-      numUsers: numUsers
-    });
-    // echo globally (all clients) that a person has connected
-    socket.broadcast.emit('user joined', {
-      username: socket.username,
-      numUsers: numUsers
-    });
-  });
-
-  // when the client emits 'typing', we broadcast it to others
-  socket.on('typing', () => {
-    socket.broadcast.emit('typing', {
-      username: socket.username
-    });
-  });
-
-  // when the client emits 'stop typing', we broadcast it to others
-  socket.on('stop typing', () => {
-    socket.broadcast.emit('stop typing', {
-      username: socket.username
-    });
-  });
-
   // when the user disconnects.. perform this
   socket.on('disconnect', () => {
-    if (addedUser) {
-      --numUsers;
-
-      // echo globally that this client has left
-      socket.broadcast.emit('user left', {
-        username: socket.username,
-        numUsers: numUsers
-      });
-    }
+    console.log('disconnect-id:'+socket.id);
+    // if (addedUser) {
+    //   --numUsers;
+    //
+    //   // echo globally that this client has left
+    //   socket.broadcast.emit('user left', {
+    //     username: socket.username,
+    //     numUsers: numUsers
+    //   });
+    // }
   });
 });
+
+//  WebRTC Signaling
+function socketIdsInRoom(roomId) {
+  var socketIds = io.nsps['/'].adapter.rooms[roomId];
+  if (socketIds) {
+    var sockets = socketIds.sockets
+    if(sockets){
+      var collection = [];
+      for (var key in sockets) {
+        collection.push(key);
+      }
+      return collection;
+    }
+  } else {
+    return [];
+  }
+}
 
 
 

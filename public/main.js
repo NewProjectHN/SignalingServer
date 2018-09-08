@@ -1,284 +1,225 @@
-$(function() {
-  var FADE_TIME = 150; // ms
-  var TYPING_TIMER_LENGTH = 400; // ms
-  var COLORS = [
-    '#e21400', '#91580f', '#f8a700', '#f78b00',
-    '#58dc00', '#287b00', '#a8f07a', '#4ae8c4',
-    '#3b88eb', '#3824aa', '#a700ff', '#d300e7'
-  ];
+var app = angular.module('myApp', []);
+app.controller('myCtrl', function($scope) {
+    $scope.join = false;
+    $scope.name = "";
+    $scope.joinRoom = function(){
+    	if($scope.name == ""){
+          alert("Please insert name");
+      }else{
 
-  // Initialize variables
-  var $window = $(window);
-  var $usernameInput = $('.usernameInput'); // Input for username
-  var $messages = $('.messages'); // Messages area
-  var $inputMessage = $('.inputMessage'); // Input message input box
-
-  var $loginPage = $('.login.page'); // The login page
-  var $chatPage = $('.chat.page'); // The chatroom page
-
-  // Prompt for setting a username
-  var username;
-  var connected = false;
-  var typing = false;
-  var lastTypingTime;
-  var $currentInput = $usernameInput.focus();
-
-  var socket = io();
-
-  const addParticipantsMessage = (data) => {
-    var message = '';
-    if (data.numUsers === 1) {
-      message += "there's 1 participant";
-    } else {
-      message += "there are " + data.numUsers + " participants";
-    }
-    log(message);
-  }
-
-  // Sets the client's username
-  const setUsername = () => {
-    username = cleanInput($usernameInput.val().trim());
-
-    // If the username is valid
-    if (username) {
-      $loginPage.fadeOut();
-      $chatPage.show();
-      $loginPage.off('click');
-      $currentInput = $inputMessage.focus();
-
-      // Tell the server your username
-      socket.emit('add user', username,function(data){
-         alert(data);
-      });
-    }
-  }
-
-  // Sends a chat message
-  const sendMessage = () => {
-    var message = $inputMessage.val();
-    // Prevent markup from being injected into the message
-    message = cleanInput(message);
-    // if there is a non-empty message and a socket connection
-    if (message && connected) {
-      $inputMessage.val('');
-      addChatMessage({
-        username: username,
-        message: message
-      });
-      // tell server to execute 'new message' and send along one parameter
-      socket.emit('new message', message);
-    }
-  }
-
-  // Log a message
-    const log = (message, options) => {
-    var $el = $('<li>').addClass('log').text(message);
-    addMessageElement($el, options);
-  }
-
-  // Adds the visual chat message to the message list
-  const addChatMessage = (data, options) => {
-    // Don't fade the message in if there is an 'X was typing'
-    var $typingMessages = getTypingMessages(data);
-    options = options || {};
-    if ($typingMessages.length !== 0) {
-      options.fade = false;
-      $typingMessages.remove();
-    }
-
-    var $usernameDiv = $('<span class="username"/>')
-      .text(data.username)
-      .css('color', getUsernameColor(data.username));
-    var $messageBodyDiv = $('<span class="messageBody">')
-      .text(data.message);
-
-    var typingClass = data.typing ? 'typing' : '';
-    var $messageDiv = $('<li class="message"/>')
-      .data('username', data.username)
-      .addClass(typingClass)
-      .append($usernameDiv, $messageBodyDiv);
-
-    addMessageElement($messageDiv, options);
-  }
-
-  // Adds the visual chat typing message
-  const addChatTyping = (data) => {
-    data.typing = true;
-    data.message = 'is typing';
-    addChatMessage(data);
-  }
-
-  // Removes the visual chat typing message
-  const removeChatTyping = (data) => {
-    getTypingMessages(data).fadeOut(function () {
-      $(this).remove();
-    });
-  }
-
-  // Adds a message element to the messages and scrolls to the bottom
-  // el - The element to add as a message
-  // options.fade - If the element should fade-in (default = true)
-  // options.prepend - If the element should prepend
-  //   all other messages (default = false)
-  const addMessageElement = (el, options) => {
-    var $el = $(el);
-
-    // Setup default options
-    if (!options) {
-      options = {};
-    }
-    if (typeof options.fade === 'undefined') {
-      options.fade = true;
-    }
-    if (typeof options.prepend === 'undefined') {
-      options.prepend = false;
-    }
-
-    // Apply options
-    if (options.fade) {
-      $el.hide().fadeIn(FADE_TIME);
-    }
-    if (options.prepend) {
-      $messages.prepend($el);
-    } else {
-      $messages.append($el);
-    }
-    $messages[0].scrollTop = $messages[0].scrollHeight;
-  }
-
-  // Prevents input from having injected markup
-  const cleanInput = (input) => {
-    return $('<div/>').text(input).html();
-  }
-
-  // Updates the typing event
-  const updateTyping = () => {
-    if (connected) {
-      if (!typing) {
-        typing = true;
-        socket.emit('typing');
+          join('ROOM_TEST',$scope.name,afterJoin);
       }
-      lastTypingTime = (new Date()).getTime();
+    }
 
-      setTimeout(() => {
-        var typingTimer = (new Date()).getTime();
-        var timeDiff = typingTimer - lastTypingTime;
-        if (timeDiff >= TYPING_TIMER_LENGTH && typing) {
-          socket.emit('stop typing');
-          typing = false;
+    loadLocalStream(false);
+    var socket = io();
+
+    var configuration = {"iceServers": [{"url": "stun:stun.l.google.com:19302"}]};
+
+    var peerConnections = {}; //map of {socketId: socket.io id, RTCPeerConnection}
+    var remoteViewContainer = document.getElementById("remoteViewContainer");
+    let localStream = null;
+    $scope.friends = []; //list of {socketId, name}
+    let me = null; //{socketId, name}
+
+    function afterJoin(){
+      $scope.join = true;
+    }
+
+    function join(roomId, name, callback) {
+      socket.emit('join', {roomId:roomId, name:name}, function(result){
+        $scope.friends = result;
+        $scope.friends.forEach((friend) => {
+          createPeerConnection(friend, true);
+        });
+
+        me = {
+          socketId: socket.id,
+          name: name
         }
-      }, TYPING_TIMER_LENGTH);
+        if(callback != null) {
+          callback();
+        }
+      });
     }
-  }
 
-  // Gets the 'X is typing' messages of a user
-  const getTypingMessages = (data) => {
-    return $('.typing.message').filter(function (i) {
-      return $(this).data('username') === data.username;
-    });
-  }
+    function createPeerConnection(friend, isOffer) {
+      let socketId = friend.socketId;
+      var retVal = new RTCPeerConnection(configuration);
 
-  // Gets the color of a username through our hash function
-  const getUsernameColor = (username) => {
-    // Compute hash code
-    var hash = 7;
-    for (var i = 0; i < username.length; i++) {
-       hash = username.charCodeAt(i) + (hash << 5) - hash;
+      peerConnections[socketId] = retVal;
+
+      retVal.onicecandidate = function (event) {
+        console.log('onicecandidate', event);
+        if (event.candidate) {
+          socket.emit('exchange', {'to': socketId, 'candidate': event.candidate });
+        }
+      };
+
+      function createOffer() {
+        retVal.createOffer(function(desc) {
+          console.log('createOffer', desc);
+          retVal.setLocalDescription(desc, function () {
+            console.log('setLocalDescription', retVal.localDescription);
+            socket.emit('exchange', {'to': socketId, 'sdp': retVal.localDescription });
+          }, logError);
+        }, logError);
+      }
+
+      retVal.onnegotiationneeded = function () {
+        console.log('onnegotiationneeded');
+        if (isOffer) {
+          createOffer();
+        }
+      }
+
+      retVal.oniceconnectionstatechange = function(event) {
+        console.log('oniceconnectionstatechange', event);
+        if (event.target.iceConnectionState === 'connected') {
+          createDataChannel();
+        }
+      };
+
+      retVal.onsignalingstatechange = function(event) {
+        console.log('onsignalingstatechange', event);
+      };
+
+      retVal.onaddstream = function (event) {
+        console.log('onaddstream', event);
+        //var element = document.createElement('video');
+        //element.id = "remoteView" + socketId;
+        //element.autoplay = 'autoplay';
+        //element.src = URL.createObjectURL(event.stream);
+        //remoteViewContainer.appendChild(element);
+        if(window.onFriendCallback != null) {
+          window.onFriendCallback(socketId, event.stream);
+        }
+      };
+
+      retVal.addStream(localStream);
+
+      function createDataChannel() {
+        if (retVal.textDataChannel) {
+          return;
+        }
+        var dataChannel = retVal.createDataChannel("text");
+
+        dataChannel.onerror = function (error) {
+          console.log("dataChannel.onerror", error);
+        };
+
+        dataChannel.onmessage = function (event) {
+          console.log("dataChannel.onmessage:", event.data);
+          if(window.onDataChannelMessage != null) {
+            window.onDataChannelMessage(JSON.parse(event.data));
+          }
+        };
+
+        dataChannel.onopen = function () {
+          console.log('dataChannel.onopen');
+        };
+
+        dataChannel.onclose = function () {
+          console.log("dataChannel.onclose");
+        };
+
+        retVal.textDataChannel = dataChannel;
+      }
+
+      return retVal;
     }
-    // Calculate color
-    var index = Math.abs(hash % COLORS.length);
-    return COLORS[index];
-  }
 
-  // Keyboard events
-
-  $window.keydown(event => {
-    // Auto-focus the current input when a key is typed
-    if (!(event.ctrlKey || event.metaKey || event.altKey)) {
-      $currentInput.focus();
-    }
-    // When the client hits ENTER on their keyboard
-    if (event.which === 13) {
-      if (username) {
-        sendMessage();
-        socket.emit('stop typing');
-        typing = false;
+    function exchange(data) {
+      var fromId = data.from;
+      var pc;
+      if (fromId in peerConnections) {
+        pc = peerConnections[fromId];
       } else {
-        setUsername();
+        let friend = $scope.friends.filter((friend) => friend.socketId == fromId)[0];
+        if(friend == null) {
+          friend = {
+            socketId: fromId,
+            name: ""
+          }
+        }
+        pc = createPeerConnection(friend, false);
+      }
+
+      if (data.sdp) {
+        console.log('exchange sdp', data);
+        pc.setRemoteDescription(new RTCSessionDescription(data.sdp), function () {
+          if (pc.remoteDescription.type == "offer")
+          pc.createAnswer(function(desc) {
+            console.log('createAnswer', desc);
+            pc.setLocalDescription(desc, function () {
+              console.log('setLocalDescription', pc.localDescription);
+              socket.emit('exchange', {'to': fromId, 'sdp': pc.localDescription });
+            }, logError);
+          }, logError);
+        }, logError);
+      } else {
+        console.log('exchange candidate', data);
+        pc.addIceCandidate(new RTCIceCandidate(data.candidate));
       }
     }
-  });
 
-  $inputMessage.on('input', () => {
-    updateTyping();
-  });
-
-  // Click events
-
-  // Focus input when clicking anywhere on login page
-  $loginPage.click(() => {
-    $currentInput.focus();
-  });
-
-  // Focus input when clicking on the message input's border
-  $inputMessage.click(() => {
-    $inputMessage.focus();
-  });
-
-  // Socket events
-
-  // Whenever the server emits 'login', log the login message
-  socket.on('login', (data) => {
-    connected = true;
-    // Display the welcome message
-    var message = "Welcome to Socket.IO Chat – ";
-    log(message, {
-      prepend: true
-    });
-    addParticipantsMessage(data);
-  });
-
-  // Whenever the server emits 'new message', update the chat body
-  socket.on('new message', (data) => {
-    addChatMessage(data);
-  });
-
-  // Whenever the server emits 'user joined', log it in the chat body
-  socket.on('user joined', (data) => {
-    log(data.username + ' joined');
-    addParticipantsMessage(data);
-  });
-
-  // Whenever the server emits 'user left', log it in the chat body
-  socket.on('user left', (data) => {
-    log(data.username + ' left');
-    addParticipantsMessage(data);
-    removeChatTyping(data);
-  });
-
-  // Whenever the server emits 'typing', show the typing message
-  socket.on('typing', (data) => {
-    addChatTyping(data);
-  });
-
-  // Whenever the server emits 'stop typing', kill the typing message
-  socket.on('stop typing', (data) => {
-    removeChatTyping(data);
-  });
-
-  socket.on('disconnect', () => {
-    log('you have been disconnected');
-  });
-
-  socket.on('reconnect', () => {
-    log('you have been reconnected');
-    if (username) {
-      socket.emit('add user', username);
+    function leave(socketId) {
+      console.log('leave', socketId);
+      var pc = peerConnections[socketId];
+      pc.close();
+      delete peerConnections[socketId];
+      if(window.onFriendLeft) {
+        window.onFriendLeft(socketId);
+      }
     }
-  });
 
-  socket.on('reconnect_error', () => {
-    log('attempt to reconnect has failed');
-  });
+    socket.on('exchange', function(data){
+      exchange(data);
+    });
 
+    socket.on('leave', function(socketId){
+      leave(socketId);
+    });
+
+    socket.on('connect', function(data) {
+      console.log('connect');
+    });
+
+    socket.on("join", function(friend) {
+      //new friend:
+      $scope.friends.push(friend);
+      console.log("New friend joint conversation: ", friend);
+    });
+
+    function logError(error) {
+      console.log("logError", error);
+    }
+
+
+    //------------------------------------------------------------------------------
+    // Services
+    function countFriends(roomId, callback) {
+      socket.emit("count", roomId, (count) => {
+        console.log("Count friends result: ", count);
+        callback(count);
+      });
+    }
+
+    function loadLocalStream(muted) {
+      navigator.getUserMedia({ "audio": true, "video": false }, function (stream) {
+        localStream = stream;
+        var selfView = document.getElementById("selfView");
+        selfView.src = URL.createObjectURL(stream);
+        selfView.muted = muted;
+      }, function(error){
+          alert(error);
+      });
+    }
+
+    function broadcastMessage(message) {
+      for (var key in peerConnections) {
+        var pc = peerConnections[key];
+        pc.textDataChannel.send(JSON.stringify(message));
+      }
+    }
 });

@@ -61,14 +61,14 @@ app.controller('myCtrl', function($scope) {
         retVal.createOffer(function(desc) {
           console.log((new Date()).getTime() + 'createOffer', desc);
           retVal.setLocalDescription(desc, function () {
-            console.log((new Date()).getTime() + 'setLocalDescription', retVal.localDescription);
+            console.log((new Date()).getTime() + 'createOffer-setLocalDescription', retVal.localDescription);
             socket.emit('exchange', {'to': socketId, 'sdp': retVal.localDescription });
           }, logError);
         }, logError);
       }
 
       retVal.onnegotiationneeded = function () {
-        console.log((new Date()).getTime() + 'onnegotiationneeded');
+        console.log((new Date()).getTime() + 'onnegotiationneeded' + ' - isOffer|'+isOffer);
         if (isOffer) {
           createOffer();
         }
@@ -134,8 +134,10 @@ app.controller('myCtrl', function($scope) {
       var fromId = data.from;
       var pc;
       if (fromId in peerConnections) {
+        console.log((new Date()).getTime() + 'id in peer');
         pc = peerConnections[fromId];
       } else {
+        console.log((new Date()).getTime() + 'id not in peer');
         let friend = $scope.friends.filter((friend) => friend.socketId == fromId)[0];
         if(friend == null) {
           friend = {
@@ -153,7 +155,7 @@ app.controller('myCtrl', function($scope) {
           pc.createAnswer(function(desc) {
             console.log((new Date()).getTime() + 'createAnswer', desc);
             pc.setLocalDescription(desc, function () {
-              console.log((new Date()).getTime() + 'setLocalDescription', pc.localDescription);
+              console.log((new Date()).getTime() + 'data.sdp - setLocalDescription', pc.localDescription);
               socket.emit('exchange', {'to': fromId, 'sdp': pc.localDescription });
             }, logError);
           }, logError);
@@ -208,7 +210,7 @@ app.controller('myCtrl', function($scope) {
     }
 
     function loadLocalStream(muted) {
-      navigator.getUserMedia({ "audio": true, "video": false }, function (stream) {
+      navigator.getUserMedia({ "audio": true, "video": true }, function (stream) {
         console.log((new Date()).getTime() + 'loadLocalStream');
         localStream = stream;
         var selfView = document.getElementById("selfView");

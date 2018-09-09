@@ -9,6 +9,7 @@ var httpsOptions = {
   key: fs.readFileSync('./fake-keys/privatekey.pem'),
   cert: fs.readFileSync('./fake-keys/certificate.pem')
 };
+console.log(httpsOptions);
 var port = process.env.PORT || 3000;
 var server = require('https').createServer(httpsOptions,app);
 var io = require('socket.io')(server);

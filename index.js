@@ -4,17 +4,18 @@ var app = express();
 var path = require('path');
 
 
-// var fs = require('fs');
-// var httpsOptions = {
-//   key: fs.readFileSync('./fake-keys/privatekey.pem'),
-//   cert: fs.readFileSync('./fake-keys/certificate.pem')
-// };
+var fs = require('fs');
+var httpsOptions = {
+ key: fs.readFileSync('./fake-keys/privateKey.key'),
+ cert: fs.readFileSync('./fake-keys/certificate.crt')
+};
 // console.log(httpsOptions);
 // var port = process.env.PORT || 3000;
 // var server = require('https').createServer(app);
 // var io = require('socket.io')(server);
-
-var server = require('http').createServer(app);
+// OPen C:\OpenSSL\bin\openssl
+// Genkey with this command: req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -keyout privateKey.key -out certificate.crt
+var server = require('https').createServer(httpsOptions,app);
 var io = require('socket.io')(server);
 var port = process.env.PORT || 3000;
 

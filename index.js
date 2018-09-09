@@ -4,15 +4,19 @@ var app = express();
 var path = require('path');
 
 
-var fs = require('fs');
-var httpsOptions = {
-  key: fs.readFileSync('./fake-keys/privatekey.pem'),
-  cert: fs.readFileSync('./fake-keys/certificate.pem')
-};
-console.log(httpsOptions);
-var port = process.env.PORT || 3000;
-var server = require('https').createServer(app);
+// var fs = require('fs');
+// var httpsOptions = {
+//   key: fs.readFileSync('./fake-keys/privatekey.pem'),
+//   cert: fs.readFileSync('./fake-keys/certificate.pem')
+// };
+// console.log(httpsOptions);
+// var port = process.env.PORT || 3000;
+// var server = require('https').createServer(app);
+// var io = require('socket.io')(server);
+
+var server = require('http').createServer(app);
 var io = require('socket.io')(server);
+var port = process.env.PORT || 3000;
 
 // var router = express.Router();
 //

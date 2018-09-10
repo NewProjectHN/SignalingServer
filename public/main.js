@@ -26,6 +26,7 @@ app.controller('myCtrl', function($scope) {
     function afterJoin(){
       $scope.join = true;
     }
+  
 
     function join(roomId, name, callback) {
       socket.emit('join', {roomId:roomId, name:name}, function(result){
@@ -210,7 +211,7 @@ app.controller('myCtrl', function($scope) {
     }
 
     function loadLocalStream(muted) {
-      navigator.getUserMedia({ "audio": true, "video": true }, function (stream) {
+      navigator.getUserMedia({ "audio": false, "video": true }, function (stream) {
         console.log((new Date()).getTime() + 'loadLocalStream');
         localStream = stream;
         var selfView = document.getElementById("selfView");

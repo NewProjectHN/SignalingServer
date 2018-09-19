@@ -1,6 +1,7 @@
 // Setup basic express server
 var express = require('express');
 var app = express();
+app.use(sslRedirect());
 var path = require('path');
 
 

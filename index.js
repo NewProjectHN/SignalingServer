@@ -1,8 +1,8 @@
 // Setup basic express server
-var sslRedirect = require('heroku-ssl-redirect');
+// var sslRedirect = require('heroku-ssl-redirect');
 var express = require('express');
 var app = express();
-app.use(sslRedirect());
+// app.use(sslRedirect());
 var path = require('path');
 
 
@@ -18,8 +18,8 @@ var httpsOptions = {
 // OPen C:\OpenSSL\bin\openssl
 // Genkey with this command: req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -keyout privateKey.key -out certificate.crt
 // app.enable('trust proxy');
-var server = require('https').createServer(httpsOptions,app);
-// var server = require('http').createServer(app);
+// var server = require('https').createServer(httpsOptions,app);
+var server = require('http').createServer(app);
 var io = require('socket.io')(server);
 var port = process.env.PORT || 3000;
 

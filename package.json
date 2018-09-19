@@ -10,7 +10,6 @@
     "engine.io": "~3.2.0",
     "express": "4.13.4",
     "has-binary2": "~1.0.2",
-    "heroku-ssl-redirect": "0.0.4",
     "socket.io": "^2.1.1"
   },
   "scripts": {

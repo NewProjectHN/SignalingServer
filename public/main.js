@@ -15,7 +15,14 @@ app.controller('myCtrl', function($scope) {
     loadLocalStream(false);
     var socket = io();
 
-    var configuration = {"iceServers": [{"url": "stun:stun.l.google.com:19302"}]};
+    var configuration = {"iceServers": [
+        {"url": "stun:stun.l.google.com:19302"},
+        {
+        	"url": 'turn:numb.viagenie.ca',
+        	"credential": 'muazkh',
+        	"username": 'webrtc@live.com'
+        }
+    ]};
 
     var peerConnections = {}; //map of {socketId: socket.io id, RTCPeerConnection}
     var remoteViewContainer = document.getElementById("remoteViewContainer");
@@ -26,7 +33,7 @@ app.controller('myCtrl', function($scope) {
     function afterJoin(){
       $scope.join = true;
     }
-  
+
 
     function join(roomId, name, callback) {
       socket.emit('join', {roomId:roomId, name:name}, function(result){
@@ -211,6 +218,13 @@ app.controller('myCtrl', function($scope) {
     }
 
     function loadLocalStream(muted) {
+      navigator.getUserMedia = (
+          navigator.getUserMedia ||
+          navigator.webkitGetUserMedia ||
+          navigator.mozGetUserMedia ||
+          navigator.msGetUserMedia
+      );
+
       navigator.getUserMedia({ "audio": false, "video": true }, function (stream) {
         console.log((new Date()).getTime() + 'loadLocalStream');
         localStream = stream;

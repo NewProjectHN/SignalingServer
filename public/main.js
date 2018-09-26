@@ -241,7 +241,7 @@ app.controller('myCtrl', function($scope) {
 
       URL = URL || webkitURL;
 
-      navigator.getUserMedia({ "audio": false, "video": true }, function (stream) {
+      navigator.getUserMedia({ "audio": true, "video": true }, function (stream) {
         console.log((new Date()).getTime() + 'loadLocalStream');
         localStream = stream;
         var selfView = document.getElementById("selfView");

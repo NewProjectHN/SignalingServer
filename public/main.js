@@ -225,11 +225,18 @@ app.controller('myCtrl', function($scope) {
           navigator.msGetUserMedia
       );
 
+      URL = URL || webkitURL;
+
       navigator.getUserMedia({ "audio": false, "video": true }, function (stream) {
         console.log((new Date()).getTime() + 'loadLocalStream');
         localStream = stream;
         var selfView = document.getElementById("selfView");
-        selfView.src = URL.createObjectURL(stream);
+        selfView.srcObject = stream;
+        // try{
+        //   selfView.src = URL.createObjectURL(stream);
+        // }catch(e){
+        //   selfView.srcObject = stream;
+        // }
         selfView.muted = muted;
       }, function(error){
           alert(error);
@@ -255,7 +262,11 @@ window.onFriendCallback = (socketId, stream) => {
   let videoElement = document.createElement('video');
   videoElement.className = "video thumbnail";
   videoElement.autoplay = 'autoplay';
-  videoElement.src = URL.createObjectURL(stream);
+  // try{
+  // videoElement.src = URL.createObjectURL(stream);
+  // }catch(e){
+    videoElement.srcObject = stream;
+  // }
   thumbnailElement.appendChild(videoElement);
 
   let nameElement = document.createElement("div");

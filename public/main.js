@@ -1,15 +1,22 @@
 
 var app = angular.module('myApp', []);
 app.controller('myCtrl', function($scope) {
-    $scope.join = false;
+    $scope.isLogin = false;
     $scope.name = "";
+    $scope.room = "ROOM_TEST";
     $scope.joinRoom = function(){
     	if($scope.name == ""){
-          alert("Please insert name");
+          alert("Please insert name!");
+      }else if($scope.room == ""){
+          alert("Please insert a room to join!");
       }else{
-
-          join('ROOM_TEST',$scope.name,afterJoin);
+          $scope.join($scope.room,$scope.name,$scope.afterJoin);
       }
+    }
+
+    $scope.outRoom = function(){
+      socket.close();
+      $scope.isLogin = false;
     }
 
     loadLocalStream(false);
@@ -30,13 +37,18 @@ app.controller('myCtrl', function($scope) {
     $scope.friends = []; //list of {socketId, name}
     let me = null; //{socketId, name}
 
-    function afterJoin(){
-      $scope.join = true;
+    $scope.afterJoin = function(){
+      $scope.isLogin = true;
+      $scope.$apply();
     }
 
 
-    function join(roomId, name, callback) {
+    $scope.join = function(roomId, name, callback) {
+      if(socket.disconnected){
+        socket = io();
+      }
       socket.emit('join', {roomId:roomId, name:name}, function(result){
+        console.log(result);
         $scope.friends = result;
         $scope.friends.forEach((friend) => {
           createPeerConnection(friend, true);
@@ -54,6 +66,8 @@ app.controller('myCtrl', function($scope) {
 
     function createPeerConnection(friend, isOffer) {
       let socketId = friend.socketId;
+      let userName = friend.name;
+      console.log(friend);
       var retVal = new RTCPeerConnection(configuration);
 
       peerConnections[socketId] = retVal;
@@ -101,7 +115,7 @@ app.controller('myCtrl', function($scope) {
         //element.src = URL.createObjectURL(event.stream);
         //remoteViewContainer.appendChild(element);
         if(window.onFriendCallback != null) {
-          window.onFriendCallback(socketId, event.stream);
+          window.onFriendCallback(socketId, event.stream,userName);
         }
       };
 
@@ -150,7 +164,7 @@ app.controller('myCtrl', function($scope) {
         if(friend == null) {
           friend = {
             socketId: fromId,
-            name: ""
+            name: data.name
           }
         }
         pc = createPeerConnection(friend, false);
@@ -251,13 +265,12 @@ app.controller('myCtrl', function($scope) {
     }
 });
 
-window.onFriendCallback = (socketId, stream) => {
+window.onFriendCallback = (socketId, stream, name) => {
   // let friend = friends.filter(friend => friend.socketId == socketId)[0];
   // console.log("OnFriendCallback: ", friends);
   let thumbnailElement = document.createElement("div");
   thumbnailElement.className = "video-thumbnail";
-  thumbnailElement.style = "width: 30%";
-  thumbnailElement.id = "friend-" + 1;
+  thumbnailElement.id = "friend-" + socketId;
 
   let videoElement = document.createElement('video');
   videoElement.className = "video thumbnail";
@@ -270,9 +283,15 @@ window.onFriendCallback = (socketId, stream) => {
   thumbnailElement.appendChild(videoElement);
 
   let nameElement = document.createElement("div");
-  nameElement.className = "name";
-  nameElement.innerText = "123";
+  nameElement.className = "name-user";
+  nameElement.innerText = name;
   thumbnailElement.appendChild(nameElement);
 
   document.getElementsByClassName("videos-container")[0].appendChild(thumbnailElement);
+}
+
+window.onFriendLeft = (socketId) => {
+  var elementId = "friend-" + socketId;
+  var element = document.getElementById(elementId);
+  element.parentNode.removeChild(element);
 }

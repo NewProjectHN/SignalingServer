@@ -42,7 +42,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 var numUsers = 0;
 var socketList = [];
-var mapRoomName = {};
+var mapUserName = {};
 
 io.on('connection', (socket) => {
 
@@ -54,17 +54,20 @@ io.on('connection', (socket) => {
     var name = data.name;
 
     socket.roomID = roomId;
-    mapRoomName[roomId] = name;
+    mapUserName[socket.id] = name;
     socket.join(roomId);
     console.log((new Date()).getTime() + 'join-id:'+socket.id)
     var socketIds = socketIdsInRoom(roomId);
     let friends = socketIds.map((socketId) => {
       return {
         socketId: socketId,
-        name: mapRoomName[socketId]
+        name: mapUserName[socketId]
       }
     }).filter((friend) => friend.socketId != socket.id);
-    console.log("friend:"+friends.length);
+    console.log("friend LIST---:"+friends.length);
+    for(var i = 0 ;i < friends.length;i++){
+        console.log('SocketID:'+friends[i].socketId + "|name:"+friends[i].name);
+    }
     fn(friends);
     //broadcast
     // friends.forEach((friend) => {
@@ -82,7 +85,8 @@ io.on('connection', (socket) => {
 
     var to = io.sockets.connected[data.to];
     if(to != undefined){
-      to.emit('exchange',{from:socket.id,sdp:data.sdp,candidate:data.candidate});
+      let name = mapUserName[socket.id];
+      to.emit('exchange',{from:socket.id,sdp:data.sdp,candidate:data.candidate,name:name});
     }
 
     // socket.emit('join success',arr);

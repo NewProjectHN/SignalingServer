@@ -22,12 +22,13 @@ app.controller('myCtrl', function($scope) {
     loadLocalStream(false);
     var socket = io();
 
+// {"url": "stun:stun.l.google.com:19302"},
     var configuration = {"iceServers": [
-        {"url": "stun:stun.l.google.com:19302"},
+
         {
-        	"url": 'turn:192.158.29.39:3478?transport=tcp',
-        	"credential": 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
-        	"username": '28224511:1379330808'
+        	"url": 'turn:35.187.252.124:2222?transport=tcp',
+        	"credential": 'webrtc',
+        	"username": 'WebRTC@123456'
         }
     ]};
 

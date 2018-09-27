@@ -24,7 +24,7 @@ app.controller('myCtrl', function($scope) {
 
 // {"url": "stun:stun.l.google.com:19302"},
     var configuration = {"iceServers": [
-
+        {"url": "stun:stun.l.google.com:19302"},
         {
         	"url": 'turn:35.187.252.124:2222?transport=tcp',
         	"credential": 'WebRTC@123456',

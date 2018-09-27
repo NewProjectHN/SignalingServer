@@ -27,8 +27,8 @@ app.controller('myCtrl', function($scope) {
 
         {
         	"url": 'turn:35.187.252.124:2222?transport=tcp',
-        	"credential": 'webrtc',
-        	"username": 'WebRTC@123456'
+        	"credential": 'WebRTC@123456',
+        	"username": 'webrtc'
         }
     ]};
 

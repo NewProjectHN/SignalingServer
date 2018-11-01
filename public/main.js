@@ -159,6 +159,12 @@ app.controller('myCtrl', function($scope,$http) {
           $scope.hasNewCall = false;
         }
 
+        for(var i = 0;i < $scope.friendAllList.length;i++){
+          if($scope.friendAllList[i].email == email){
+            $scope.friendAllList[i].active = false;
+          }
+        }
+
         $scope.$apply();
       });
 

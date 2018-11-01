@@ -7,6 +7,8 @@
   "private": true,
   "license": "BSD",
   "dependencies": {
+    "body-parser": "^1.18.3",
+    "cors": "^2.8.4",
     "engine.io": "~3.2.0",
     "express": "4.13.4",
     "has-binary2": "~1.0.2",

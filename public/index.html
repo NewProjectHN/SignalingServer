@@ -7,30 +7,76 @@
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
 </head>
 <body>
-  <div ng-app="myApp" ng-controller="myCtrl" class="container">
-
+  <div ng-app="myApp" ng-controller="myCtrl" class="container-wrapper">
     <div class="home-wrapper" ng-show="!isLogin">
         <div class="row">
           <div class="col-4">Your Name:</div>
           <div class="col-8"><input class="input-user" ng-model="name" /></div>
         </div>
-        <div class="row">
+        <!-- <div class="row">
           <div class="col-4">Room:</div>
           <div class="col-8"><input class="input-user" ng-model="room" /></div>
-        </div>
+        </div> -->
         <div class="row">
             <div class="col-4"></div>
-            <div class="col-8"><input type="button" value="JOIN" ng-click="joinRoom()"/></div>
+            <div class="col-8"><button ng-click="joinRoom()">JOIN</button></div>
         </div>
     </div>
     <div class="content-wrapper" ng-show="isLogin">
-        <div class="action-menu">
-              <div>Hello:<span ng-bind="name"/> - Room:<span ng-bind="room"/></div>
-              <!-- <div><input type="button" value="OUT" ng-click="outRoom()"/></div> -->
+        <div class="left-content">
+            <div class="friend-item" ng-repeat="friend in friendAllList">
+                <div class="user-info">
+                    <div class="alert-circle" ng-class="{online:friend.active}"></div>
+                    <div class="friend-name">{{friend.email}}</div>
+                </div>
+                <div class="action-call"><button ng-click="callFriend(friend.email,friend.active)">Call</button></div>
+            </div>
         </div>
-        <div class="full-view"><video autoplay id="selfView" src=""/></div>
-        <div class="videos-container">
+        <div class="center-content">
+          <div class="action-menu">
+                <div>Hello:<span ng-bind="name"/> - Room:<span ng-bind="room"/></div>
+                <!-- <div><input type="button" value="OUT" ng-click="outRoom()"/></div> -->
+          </div>
 
+          <div class="active-room" ng-show="calling">
+            <div class="action-call" ng-show="!makeCall && !hasNewCall">
+              <button class="voice-button" ng-click="switchAudio()">{{isAudio?'Voice':'Muted'}}</button>
+              <button class="video-button" ng-click="switchVideo()">{{isVideo?'EnableVideo':'DisableVideo'}}</button>
+              <button class="video-button" ng-click="finishCall()">Finish Call</button>
+            </div>
+            <div class="full-view"><video autoplay id="selfView" muted="muted" src=""/></div>
+            <div class="videos-container">
+
+            </div>
+          </div>
+        </div>
+        <div class="right-content"></div>
+
+        <div class="mask" ng-show="makeCall || hasNewCall"></div>
+        <div class="make-call" ng-show="makeCall">
+            <div class="call-info">
+                <div class="name-user">Call To:{{friendCall}}</div>
+                <div class="status-call">{{statusCall}}...</div>
+            </div>
+            <div class="call-action">
+                <button class="voice-button" ng-click="switchAudio()">{{isAudio?'Voice':'Muted'}}</button>
+                <button class="video-button" ng-click="switchVideo()">{{isVideo?'EnableVideo':'DisableVideo'}}</button>
+
+                <button class="end-call" ng-click="endCall()">EndCall</button>
+            </div>
+        </div>
+
+        <div class="new-call" ng-show="hasNewCall">
+            <div class="call-info">
+                <div class="name-user">You have a new call from [{{friendCall}}]</div>
+                <div class="name-user">Ringing</div>
+            </div>
+            <div>
+              <button class="voice-button" ng-click="switchAudio()">{{isAudio?'Voice':'Muted'}}</button>
+              <button class="video-button" ng-click="switchVideo()">{{isVideo?'EnableVideo':'DisableVideo'}}</button>
+              <button ng-click="receiveCall()">Reveive Call</button>
+              <button ng-click="refuseCall()">Refuse Call</button>
+            </div>
         </div>
     </div>
   </div>

@@ -1,4 +1,3 @@
-
 # Socket.IO Chat
 
 A simple chat demo for socket.io
@@ -23,3 +22,9 @@ on website load.
 - Users can type chat messages to the chat room.
 - A notification is sent to all users when a user joins or leaves
 the chatroom.
+
+## Modules
+- WebRTC module can be deployed on NodeJS in folder public
+
+##Debug
+node --inspect-brk=3000 index.js

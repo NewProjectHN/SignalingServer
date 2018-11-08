@@ -29,28 +29,60 @@
                     <div class="alert-circle" ng-class="{online:friend.active}"></div>
                     <div class="friend-name">{{friend.email}}</div>
                 </div>
-                <div class="action-call"><button ng-click="callFriend(friend.email,friend.active)">Call</button></div>
+                <div class="action-call">
+                  <button ng-click="callFriend(friend.email,friend.active)">Call</button>
+                  <button ng-click="chatFriend(friend.email,friend.active)">Chat</button>
+                </div>
             </div>
         </div>
         <div class="center-content">
           <div class="action-menu">
                 <div>Hello:<span ng-bind="name"/> - Room:<span ng-bind="room"/></div>
-                <!-- <div><input type="button" value="OUT" ng-click="outRoom()"/></div> -->
+                <div class="action-chat">
+                    <button ng-click="isChat = true">OpenChat</button>
+                    <button ng-click="isChat = false">OpenCall</button>
+                </div>
           </div>
+          <div class="active-room" ng-show="isChat && currentChat != ''">
+              <div class="chat-content">
+                  <div class="chat-info">Chat with : <h1>{{currentChat}}</h1></div>
+                  <div id="chat-msg-content" class="chat-msg-content">
+                      <div ng-repeat="msg in currentListMsg" class="chat-item" ng-class="msg.isMe?'me':'guest'">
+                          <div class="time-chat">{{getDateDisplay(msg.date)}}</div>
+                          <div class="text-chat">{{msg.text}}</div>
+                      </div>
+                      <!-- <div class="chat-item me">
+                        <div class="time-chat">12:25</div>
+                        <div class="text-chat">Xin chao oooooo!</div>
+                      </div>
+                      <div class="chat-item me">
+                        <div class="time-chat">12:25</div>
+                        <div class="text-chat">Xin chao oooooodddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd!</div>
+                      </div> -->
+                  </div>
+              </div>
+              <div class="chat-send">
+                <textarea class="chat-input" ng-model="textInput" ng-keypress="myFunct($event)"></textarea>
+                <Button class="send-button" ng-click="sendMsg()">SEND</Button>
+              </div>
+          </div>
+          <div class="active-room" ng-show="!isChat">
+            <div class="call-wrapper" ng-show="calling">
+              <div class="action-call" ng-show="!makeCall && !hasNewCall">
+                <button class="voice-button" ng-click="switchAudio()">{{isAudio?'Voice':'Muted'}}</button>
+                <button class="video-button" ng-click="switchVideo()">{{isVideo?'EnableVideo':'DisableVideo'}}</button>
+                <button class="video-button" ng-click="finishCall()">Finish Call</button>
+              </div>
+              <div class="full-view"><video autoplay id="selfView" muted="muted" src=""/></div>
+              <div class="videos-container">
 
-          <div class="active-room" ng-show="calling">
-            <div class="action-call" ng-show="!makeCall && !hasNewCall">
-              <button class="voice-button" ng-click="switchAudio()">{{isAudio?'Voice':'Muted'}}</button>
-              <button class="video-button" ng-click="switchVideo()">{{isVideo?'EnableVideo':'DisableVideo'}}</button>
-              <button class="video-button" ng-click="finishCall()">Finish Call</button>
-            </div>
-            <div class="full-view"><video autoplay id="selfView" muted="muted" src=""/></div>
-            <div class="videos-container">
-
+              </div>
             </div>
           </div>
         </div>
-        <div class="right-content"></div>
+        <div class="right-content">
+
+        </div>
 
         <div class="mask" ng-show="makeCall || hasNewCall"></div>
         <div class="make-call" ng-show="makeCall">

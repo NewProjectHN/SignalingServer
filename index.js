@@ -42,15 +42,14 @@ var router = express.Router();
 // Map of token to valid user for testing only
 var mapToken = {}
 app.use('/api', router);
-
-// Routing
-app.use(express.static(path.join(__dirname, 'public')));
-
 // app.use(function(req, res, next) {
 //   res.header("Access-Control-Allow-Origin", "*");
 //   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
 //   next();
 // });
+/ Routing
+app.use(express.static(path.join(__dirname, 'public')));
+
 
 function getUserBySocketId(socketId){
   var token = mapSocketIdToken[socketId];
@@ -95,6 +94,8 @@ server.listen(port, () => {
   console.log('Server listening at port %d', port);
 });
 
+// Routing
+//app.use(express.static(path.join(__dirname, 'public')));
 
 // Chatroom
 var numUsers = 0;
@@ -222,6 +223,12 @@ function busyNow(socket,email){
   io.to(user.socket.id).emit("busy-now",socketUser.email);
 }
 
+function sendMsg(socket,data){
+  var user = getUserActiveByUser({email:data.email});
+  var socketUser = getUserBySocketId(socket.id);
+  io.to(user.socket.id).emit("send-msg",{email:socketUser.email,msg:data.msg});
+}
+
 var configAuth = {authenticate:validToken,disconnect:disconnect};
 // Filter user
 socketioAuth(io,configAuth);
@@ -232,7 +239,8 @@ var configRoom = {
   ringingCall:ringingCall,
   startCall: startCall,
   finishCall: finishCall,
-  busyNow:busyNow
+  busyNow:busyNow,
+  sendMsg:sendMsg
 };
 socketIORoom(io,configRoom);
 

@@ -51,6 +51,54 @@ app.controller('myCtrl', function($scope,$http) {
 
     $scope.friendAllList = null;
 
+    $scope.isChat = true;
+    $scope.currentChat = "";
+    $scope.currentListMsg = [];
+    $scope.mapAllMsg = {};
+    $scope.textInput = "";
+
+    var socket = null;
+    $scope.getDateDisplay = function(date){
+      return date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
+    }
+
+    $scope.addNewMessage = function(isMe,user,text){
+      // message duoc gui tu toi
+      var msg = {text:text,date:new Date(),isMe:isMe};
+      var lstMsg = null;
+      if($scope.mapAllMsg[user]){
+        lstMsg = $scope.mapAllMsg[user];
+      }else{
+        lstMsg = [];
+      }
+      lstMsg.push(msg);
+      $scope.mapAllMsg[user] = lstMsg;
+      if(user == $scope.currentChat){
+        $scope.currentListMsg.push(msg);
+        var objDiv = document.getElementById("chat-msg-content");
+        objDiv.scrollTop = objDiv.scrollHeight;
+      }
+    }
+
+    $scope.sendMsg = function(){
+      if($scope.currentChat != ""){
+        if($scope.textInput == ""){
+          alert('Input a meassage');
+        }else{
+          socket.emit("send-msg",{email:$scope.currentChat,msg:$scope.textInput});
+          $scope.addNewMessage(true,$scope.currentChat,$scope.textInput);
+          $scope.textInput = "";
+        }
+      }else{
+        alert('Choose a user to chat');
+      }
+    }
+
+    $scope.myFunct = function(keyEvent) {
+      if (keyEvent.which === 13)
+        $scope.sendMsg();
+    }
+
     $scope.outRoom = function(){
       socket.close();
       $scope.isLogin = false;
@@ -83,7 +131,7 @@ app.controller('myCtrl', function($scope,$http) {
     $scope.friends = []; //list of {socketId, name}
     let me = null; //{socketId, name}
 
-    var socket = null;
+
 
     $scope.afterJoin = function(){
 
@@ -244,6 +292,12 @@ app.controller('myCtrl', function($scope,$http) {
         $scope.$apply();
       });
 
+      socket.on("send-msg", function(data) {
+        $scope.addNewMessage(false,data.email,data.msg);
+        // $scope.callFrom = friendEmail;
+        $scope.$apply();
+      });
+
       $scope.isLogin = true;
       // $scope.$apply();
     };
@@ -312,6 +366,7 @@ app.controller('myCtrl', function($scope,$http) {
       if($scope.calling){
         alert('You are calling');
       }else if(active){
+          $scope.isChat =false;
           $scope.calling = true;
           $scope.makeCall = true;
           $scope.friendCall = email;
@@ -319,6 +374,21 @@ app.controller('myCtrl', function($scope,$http) {
           // $scope.$apply();
           loadLocalStream(false,$scope.isAudio,$scope.isVideo);
           socket.emit("call-to",email);
+      }
+    }
+
+    $scope.chatFriend = function(email,active){
+      if(active){
+          $scope.isChat =true;
+          $scope.currentChat = email;
+          if($scope.mapAllMsg[email]){
+              $scope.currentListMsg = $scope.mapAllMsg[email];
+          }else{
+            $scope.currentListMsg = [];
+          }
+
+      }else{
+        alert('User not active');
       }
     }
 

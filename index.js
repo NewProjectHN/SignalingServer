@@ -47,7 +47,7 @@ app.use('/api', router);
 //   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
 //   next();
 // });
-/ Routing
+// Routing
 app.use(express.static(path.join(__dirname, 'public')));
 
 

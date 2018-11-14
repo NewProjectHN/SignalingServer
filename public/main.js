@@ -252,7 +252,7 @@ app.controller('myCtrl', function($scope,$http) {
       }
       if(isFound){
         $scope.isLogin = true;
-        let config = {'socketURL':'http://localhost:3000'};
+        let config = {'socketURL':''};
         let userFriends = $scope.getUserFriends();
         let user = {userId:$scope.userId,userType:$scope.userType,userFriends:userFriends};
         let callback = {

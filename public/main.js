@@ -4,12 +4,10 @@ var deviceId = Date.now();
 var SERVER_URL = '';
 let localStream = null;
 
-window.onFriendCallback = (email, stream, name) => {
-  // let friend = friends.filter(friend => friend.socketId == socketId)[0];
-  // console.log("OnFriendCallback: ", friends);
+window.onFriendCallback = (userId, stream) => {
   let thumbnailElement = document.createElement("div");
   thumbnailElement.className = "video-thumbnail";
-  thumbnailElement.id = "friend-" + email;
+  thumbnailElement.id = "friend-" + userId;
 
   let videoElement = document.createElement('video');
   videoElement.className = "video thumbnail";
@@ -23,14 +21,15 @@ window.onFriendCallback = (email, stream, name) => {
 
   let nameElement = document.createElement("div");
   nameElement.className = "name-user";
-  nameElement.innerText = name;
+  nameElement.innerText = userId;
   thumbnailElement.appendChild(nameElement);
 
   document.getElementsByClassName("videos-container")[0].appendChild(thumbnailElement);
 }
 
-window.onFriendLeft = (email) => {
-  var elementId = "friend-" + email;
+window.onFriendLeft = (user) => {
+  var {userId} = user;
+  var elementId = "friend-" + userId;
   var element = document.getElementById(elementId);
   if(element){
     element.parentNode.removeChild(element);
@@ -39,7 +38,7 @@ window.onFriendLeft = (email) => {
 
 app.controller('myCtrl', function($scope,$http) {
     $scope.isLogin = false;
-    $scope.name = "a";
+    // $scope.name = "a";
     $scope.room = "ROOM_TEST";
 
     $scope.isVideo = true;
@@ -49,15 +48,38 @@ app.controller('myCtrl', function($scope,$http) {
     $scope.makeCall = false;
     $scope.hasNewCall = false;
 
-    $scope.friendAllList = null;
+    $scope.friendAllList = [
+      {userId:'d1',active:false,userType:0},
+      {userId:'d2',active:false,userType:0},
+      {userId:'d3',active:false,userType:0},
+      {userId:'p1',active:false,userType:1},
+      {userId:'p2',active:false,userType:1},
+      {userId:'p3',active:false,userType:1},
+    ];
 
-    $scope.isChat = true;
+    $scope.filterUser = function(user){
+      return user.userId != $scope.userId && user.userType != $scope.userType;
+    }
+
+    $scope.getUserFriends = function(){
+      var lst = [];
+      $scope.friendAllList.forEach(friend=>{
+        if(friend.userId != $scope.userId && friend.userType != $scope.userType){
+          lst.push(friend);
+        }
+      });
+      return lst;
+    }
+
+    $scope.isChat = false;
     $scope.currentChat = "";
     $scope.currentListMsg = [];
     $scope.mapAllMsg = {};
     $scope.textInput = "";
 
-    var socket = null;
+    $scope.userId = "";
+    $scope.userType = "0";
+
     $scope.getDateDisplay = function(date){
       return date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
     }
@@ -85,8 +107,8 @@ app.controller('myCtrl', function($scope,$http) {
         if($scope.textInput == ""){
           alert('Input a meassage');
         }else{
-          socket.emit("send-msg",{email:$scope.currentChat,msg:$scope.textInput});
-          $scope.addNewMessage(true,$scope.currentChat,$scope.textInput);
+          sendMsg({userId:$scope.userId,userType:$scope.userType},$scope.textInput);
+          $scope.addNewMessage(true,$scope.userId,$scope.textInput);
           $scope.textInput = "";
         }
       }else{
@@ -100,11 +122,8 @@ app.controller('myCtrl', function($scope,$http) {
     }
 
     $scope.outRoom = function(){
-      socket.close();
       $scope.isLogin = false;
     }
-
-    //
 
     $scope.switchAudio = function(){
         $scope.isAudio = !$scope.isAudio;
@@ -115,15 +134,6 @@ app.controller('myCtrl', function($scope,$http) {
         $scope.isVideo = !$scope.isVideo;
         loadLocalStream(false,$scope.isAudio,$scope.isVideo);
     }
-// {"url": "stun:stun.l.google.com:19302"},
-    var configuration = {"iceServers": [
-        {"url": "stun:stun.l.google.com:19302"},
-        {
-        	"url": 'turn:35.187.252.124:2222?transport=tcp',
-        	"credential": 'WebRTC@123456',
-        	"username": 'webrtc'
-        }
-    ]};
 
     var peerConnections = {}; //map of {socketId: socket.io id, RTCPeerConnection}
     var remoteViewContainer = document.getElementById("remoteViewContainer");
@@ -131,258 +141,161 @@ app.controller('myCtrl', function($scope,$http) {
     $scope.friends = []; //list of {socketId, name}
     let me = null; //{socketId, name}
 
-
-
-    $scope.afterJoin = function(){
-
-      socket = io(SERVER_URL);
-
-      socket.on('exchange', function(data){
-        console.log((new Date()).getTime() + " - exchange-from-server:", data);
-        exchange(data);
-      });
-
-      socket.on('leave', function(email){
-        leave(email);
-      });
-
-      // socket.on('connect', function(data) {
-      //   console.log('connect');
-      //
-      // });
-
-      socket.on('connect', function(data) {
-        console.log('connect');
-        socket.emit('authentication', {token: $scope.token});
-      });
-
-      socket.on('authenticated', function(data) {
-        console.log('authenticated');
-        // $scope.afterJoin();
-      });
-
-      // socket.on("join", function(friend) {
-      //   //new friend:
-      //   $scope.friends.push(friend);
-      //   console.log("New friend joint conversation: ", friend);
-      // });
-
-      socket.on("friend-online", function(email) {
-        //new friend:
-        console.log("New friend joint conversation: ", email);
-        var isFound = false;
-        for(var i = 0;i < $scope.friendAllList.length;i++){
-          if($scope.friendAllList[i].email == email){
-            isFound = true;
-            $scope.friendAllList[i].active = true;
-          }
-        }
-        if(!isFound){
-          $scope.friendAllList.push({email:email,active:true});
-        }
-        $scope.$apply();
-
-      });
-
-      socket.on("getallfriend", function(friends) {
-        // alert(1)
-        //new friend:
-        $scope.friendAllList = [];
-        $scope.friendAllList.push(...friends);
-        console.log("List Of All Friends: ", $scope.friendAllList);
-        $scope.$apply();
-      });
-
-      socket.on("friend-disconnect", function(email) {
-        // alert(1)
-        //new friend:
-        console.log("Friend disconnect:"+email);
-        if($scope.friendCall == email){
-          if($scope.calling === true){
-            $scope.calling = false;
-            leave(email);
-          }
-
-          $scope.makeCall = false;
-          $scope.hasNewCall = false;
-        }
-
-        for(var i = 0;i < $scope.friendAllList.length;i++){
-          if($scope.friendAllList[i].email == email){
-            $scope.friendAllList[i].active = false;
-          }
-        }
-
-        $scope.$apply();
-      });
-
-      socket.on("call-from", function(email) {
-        // alert(1)
-        //new friend:
-        console.log('New Call From'+email);
-        if($scope.calling === true || $scope.makeCall === true || $scope.hasNewCall === true){
-            socket.emit('busy-now',email);
-        }else{
-          $scope.hasNewCall = true;
-          $scope.friendCall = email;
-          socket.emit('ringing',email);
-          $scope.$apply();
-        }
-
-      });
-
-      socket.on("busy-now", function(email) {
-        $scope.calling = false;
-        $scope.makeCall = false;
-        $scope.friendCall = null;
-        $scope.statusCall = '';
-        // $scope.$apply();
-        loadLocalStream(null);
-        $scope.$apply();
-        alert(email + ' busy now!!!');
-      });
-
-      socket.on("ringing", function(email) {
-        // alert(1)
-        //new friend:
-        if(email == $scope.friendCall){
-          $scope.statusCall = 'Ringing';
-        }
-        $scope.$apply();
-      });
-
-      socket.on("end-call-from", function(email) {
-        // alert(1)
-        //new friend:
-        if(email == $scope.friendCall){
-          $scope.statusCall = '';
-          $scope.hasNewCall = false;
-          $scope.friendCall = null;
-          alert('Cancel call from:'+email);
-        }
-        $scope.$apply();
-      });
-
-      socket.on("refuse-call-from", function(email) {
-        // alert(email +' refuse your call!');
-        console.log(email + ':Refuse Call From:'+$scope.friendCall);
-        $scope.makeCall = false;
-        $scope.calling = false;
-        // $scope.callFrom = friendEmail;
-        $scope.$apply();
-      });
-
-      socket.on("start-calling", function(email) {
-        // Khoi tao RCT connection
-        $scope.calling = true;
-        $scope.makeCall = false;
-        createPeerConnection(email, true);
-        // $scope.callFrom = friendEmail;
-        $scope.$apply();
-      });
-
-      socket.on("finish-calling", function(email) {
-        setLocalStream(null);
-        // alert('finish call with:'+email);
-        $scope.makeCall = false;
-        $scope.calling = false;
-        $scope.hasNewCall = false;
-        leave($scope.friendCall);
-        // $scope.callFrom = friendEmail;
-        $scope.$apply();
-      });
-
-      socket.on("send-msg", function(data) {
-        $scope.addNewMessage(false,data.email,data.msg);
-        // $scope.callFrom = friendEmail;
-        $scope.$apply();
-      });
-
-      $scope.isLogin = true;
-      // $scope.$apply();
-    };
-
-    function callbackReceive(){
-      socket.emit('start-call',$scope.friendCall);
-      // alert('Start call width:'+$scope.friendCall);
+    function receiveCallCB(stream){
+      $scope.calling = true;
+      $scope.hasNewCall = false;
+      receiveCall($scope.friendCall)
     }
-
-    $scope.receiveCall = function(){
-        $scope.calling = true;
-        $scope.hasNewCall = false;
-        loadLocalStream(false,$scope.isAudio,$scope.isVideo,callbackReceive);
-    }
-
-
-
-    $scope.refuseCall = function(){
-        $scope.hasNewCall = false;
-        socket.emit('refuse-call-from',$scope.friendCall);
+    $scope.receiveCall = function(){  
+        loadLocalStream(false,$scope.isAudio,$scope.isVideo,receiveCallCB);
     }
 
     $scope.token = null;
-    $scope.join = function(roomId, name, callback) {
-
-      $http({
-        method:'POST',
-        url: SERVER_URL + '/api/checkLogin',
-        data:{"username":$scope.name,"password":'test'},
-        headers : {'Content-Type': 'application/json'}
-      }).then(function(res,status){
-          console.log(res.data.token);
-          if(res.data.status == 'connected'){
-            alert('You are connected. Please choose another user');
-          }else if(res.data.token != null){
-            $scope.token = res.data.token;
-            callback();
-          }else{
-            alert('Not correct user name!!!');
+    $scope.getFriendOnlineCB = function(data){
+      let userFriends = $scope.getUserFriends();
+      for(var i = 0;i < data.length;i++){
+        for(var j = 0; j < userFriends.length;j++){
+          if(userFriends[j].userId == data[i].userId &&
+              userFriends[j].userType == data[i].userType){
+              userFriends[j].active = true;
           }
-      });
-
-
-      // if(socket.disconnected){
-      //   socket = io();
-      // }
-
-      // socket.emit('join', {roomId:roomId, name:name}, function(result){
-      //   console.log(result);
-      //   $scope.friends = result;
-      //   $scope.friends.forEach((friend) => {
-      //     createPeerConnection(friend, true);
-      //   });
-      //
-      //   me = {
-      //     socketId: socket.id,
-      //     name: name
-      //   }
-      //   if(callback != null) {
-      //     callback();
-      //   }
-      // });
+        }
+      }
+      $scope.$apply();
     }
 
-    $scope.callFriend = function(email,active){
+    $scope.newFriendOnlineCB = function(user){
+      var isFound = false;
+      for(var i = 0;i < $scope.friendAllList.length;i++){
+        if($scope.friendAllList[i].userId == user.userId
+         && $scope.friendAllList[i].userType == user.userType){
+          isFound = true;
+          $scope.friendAllList[i].active = true;
+        }
+      }
+      if(!isFound){
+        $scope.friendAllList.push({userId:user.userId,userType:user.userType,active:true});
+      }
+      $scope.$apply();
+    }
+
+    $scope.disconectFriend = function(user){
+      alert('User diconnect',user);
+      let {userId,userType} = user;
+
+      if($scope.friendCall.userId == userId && $scope.friendCall.userType == userType){
+        if($scope.calling === true){
+          $scope.calling = false;
+          leave(userId);
+        }
+
+        $scope.makeCall = false;
+        $scope.hasNewCall = false;
+      }
+
+      for(var i = 0;i < $scope.friendAllList.length;i++){
+        if($scope.friendAllList[i].userId == userId &&
+            $scope.friendAllList[i].userType == userType){
+          $scope.friendAllList[i].active = false;
+        }
+      }
+
+      $scope.$apply();
+    }
+
+    $scope.startCallSuccessCB = function(user,stream){
+      console.log('start call success');
+      $scope.calling = true;
+      $scope.makeCall = false;
+      $scope.$apply();
+      onFriendCallback(user.userId,stream);
+    }
+
+    $scope.endCallCB = function(user){
+      endCallTo(user);
+      $scope.$apply();
+    }
+
+    $scope.onNewMsgCB = function(user,msg){
+      alert('onNewMsgCB',user,msg);
+    }
+
+    $scope.onNewCallCB = function(user){
+      console.log('New Call From'+user);
+      if($scope.calling === true || $scope.makeCall === true || $scope.hasNewCall === true){
+          socket.emit('busy-now',user);
+      }else{
+        $scope.hasNewCall = true;
+        $scope.friendCall = user;
+        socket.emit('ringing',user);
+        $scope.$apply();
+      }
+    }
+
+    $scope.onBusyCallCB = function(user){
+      $scope.calling = false;
+      $scope.makeCall = false;
+      $scope.friendCall = null;
+      $scope.statusCall = '';
+      setLocalStream(null);
+      alert('User Busy Now');
+      $scope.$apply();
+    }
+
+    $scope.join = function(roomId, name) {
+      var isFound = false;
+      for(var i = 0;i < $scope.friendAllList.length;i++){
+        if($scope.friendAllList[i].userId == $scope.userId &&
+              $scope.friendAllList[i].userType == $scope.userType){
+              isFound = true;
+        }
+      }
+      if(isFound){
+        $scope.isLogin = true;
+        let config = {'socketURL':'http://localhost:3000'};
+        let userFriends = $scope.getUserFriends();
+        let user = {userId:$scope.userId,userType:$scope.userType,userFriends:userFriends};
+        let callback = {
+          getFriendOnlineCB:$scope.getFriendOnlineCB,//Khi co danh sach ban online tra ve
+          newFriendOnlineCB:$scope.newFriendOnlineCB,//khi co them 1 user online
+          disconectFriend:$scope.disconectFriend,// khi co 1 user disconect
+          startCallSuccessCB:$scope.startCallSuccessCB,// khi start call success
+          endCallCB:$scope.endCallCB,// Khi yeu cau ket thuc cuoc goi
+          onNewCallCB:$scope.onNewCallCB,// khi co cuoc goi moi
+          onNewMsgCB:$scope.onNewMsgCB,// khi co tin nhan moi
+          onBusyCallCB:$scope.onBusyCallCB
+        };
+        createSocketRTC(config,user,callback);
+      }else{
+        alert('Not found user!!!!');
+      }
+    }
+
+    $scope.callFriend = function(friend){
+      let {userId,active} = friend;
       if($scope.calling){
         alert('You are calling');
       }else if(active){
           $scope.isChat =false;
           $scope.calling = true;
           $scope.makeCall = true;
-          $scope.friendCall = email;
+          $scope.friendCall = friend;
           $scope.statusCall = 'Connecting';
           // $scope.$apply();
-          loadLocalStream(false,$scope.isAudio,$scope.isVideo);
-          socket.emit("call-to",email);
+          loadLocalStream(false,$scope.isAudio,$scope.isVideo,(localStream)=>{
+              var user = {userId:friend.userId,userType:friend.userType};
+              makeCall(user,localStream);
+          });
       }
     }
 
-    $scope.chatFriend = function(email,active){
+    $scope.chatFriend = function(friend){
+      let {userId,active} = friend;
       if(active){
           $scope.isChat =true;
-          $scope.currentChat = email;
-          if($scope.mapAllMsg[email]){
-              $scope.currentListMsg = $scope.mapAllMsg[email];
+          $scope.currentChat = userId;
+          if($scope.mapAllMsg[userId]){
+              $scope.currentListMsg = $scope.mapAllMsg[userId];
           }else{
             $scope.currentListMsg = [];
           }
@@ -392,191 +305,25 @@ app.controller('myCtrl', function($scope,$http) {
       }
     }
 
-    $scope.endCall = function(){
-      endCallTo();
-    }
-
     $scope.joinRoom = function(){
-      if($scope.name == ""){
-          alert("Please insert name!");
-      }else if($scope.room == ""){
-          alert("Please insert a room to join!");
+      if($scope.userId == ""){
+          alert("Please insert userId!");
       }else{
-          $scope.join($scope.room,$scope.name,$scope.afterJoin);
+          $scope.join($scope.room,$scope.name);
       }
     }
 
     $scope.finishCall = function(){
-      endCallTo();
+      finishCall($scope.friendCall);
+      endCallTo($scope.friendCall);
     }
 
-    function endCallTo(){
+    function endCallTo(user){
       $scope.calling = false;
       $scope.makeCall = false;
+      $scope.hasNewCall = false;
       setLocalStream(null);
-      leave($scope.friendCall);
-      socket.emit("finish-call",$scope.friendCall);
-    }
-
-    // $scope.joinRoom();
-    function createPeerConnection(email, isOffer) {
-      // let socketId = friend.socketId;
-      // let userName = friend.name;
-      console.log(email);
-      var retVal = new RTCPeerConnection(configuration);
-
-      peerConnections[email] = retVal;
-
-      retVal.onicecandidate = function (event) {
-        // console.log((new Date()).getTime() + 'onicecandidate', event);
-        if (event.candidate) {
-          socket.emit('exchange', {'to': email, 'candidate': event.candidate });
-        }
-      };
-
-      function createOffer() {
-        retVal.createOffer(function(desc) {
-          console.log((new Date()).getTime() + 'createOffer', desc);
-          retVal.setLocalDescription(desc, function () {
-            console.log((new Date()).getTime() + 'createOffer-setLocalDescription', retVal.localDescription);
-            socket.emit('exchange', {'to': email, 'sdp': retVal.localDescription });
-          }, logError);
-        }, logError);
-      }
-
-      retVal.onnegotiationneeded = function () {
-        // console.log((new Date()).getTime() + 'onnegotiationneeded' + ' - isOffer|'+isOffer);
-        if (isOffer) {
-          createOffer();
-        }
-      }
-
-      retVal.oniceconnectionstatechange = function(event) {
-        // console.log((new Date()).getTime() + 'oniceconnectionstatechange', event);
-        if (event.target.iceConnectionState === 'connected') {
-          createDataChannel();
-        }
-      };
-
-      retVal.onsignalingstatechange = function(event) {
-        // console.log((new Date()).getTime() + 'onsignalingstatechange', event);
-      };
-
-      retVal.onaddstream = function (event) {
-        console.log((new Date()).getTime() + 'onaddstream', event);
-        //var element = document.createElement('video');
-        //element.id = "remoteView" + email;
-        //element.autoplay = 'autoplay';
-        //element.src = URL.createObjectURL(event.stream);
-        //remoteViewContainer.appendChild(element);
-        if(window.onFriendCallback != null) {
-          window.onFriendCallback(email, event.stream,"");
-        }
-      };
-
-      if(localStream != null){
-        console.log('locastreammmmmmmmmm',localStream);
-        try{
-          retVal.addStream(localStream);
-            // window.onFriendCallback(email, localStream,"");
-        }catch(e){
-          alert('Error get device!!!');
-        }
-      }else{
-        alert('You don\'t have device to call');
-      }
-
-      function createDataChannel() {
-        if (retVal.textDataChannel) {
-          return;
-        }
-        var dataChannel = retVal.createDataChannel("text");
-
-        dataChannel.onerror = function (error) {
-          console.log((new Date()).getTime() + "dataChannel.onerror", error);
-        };
-
-        dataChannel.onmessage = function (event) {
-          console.log((new Date()).getTime() + "dataChannel.onmessage:", event.data);
-          if(window.onDataChannelMessage != null) {
-            window.onDataChannelMessage(JSON.parse(event.data));
-          }
-        };
-
-        dataChannel.onopen = function () {
-          console.log((new Date()).getTime() + 'dataChannel.onopen');
-        };
-
-        dataChannel.onclose = function () {
-          console.log((new Date()).getTime() + "dataChannel.onclose");
-        };
-
-        retVal.textDataChannel = dataChannel;
-      }
-
-      return retVal;
-    }
-
-    function exchange(data) {
-      var fromId = data.from;
-      var pc;
-      if (fromId in peerConnections) {
-        console.log((new Date()).getTime() + 'id in peer');
-        pc = peerConnections[fromId];
-      } else {
-        console.log((new Date()).getTime() + 'id not in peer');
-        // let friend = $scope.friends.filter((friend) => friend.email == fromId)[0];
-        // if(friend == null) {
-        //   friend = {
-        //     socketId: fromId,
-        //     name: data.name
-        //   }
-        // }
-        pc = createPeerConnection(fromId, false);
-      }
-
-      if (data.sdp) {
-        // console.log((new Date()).getTime() + 'exchange sdp', data);
-        pc.setRemoteDescription(new RTCSessionDescription(data.sdp), function () {
-          if (pc.remoteDescription.type == "offer")
-          pc.createAnswer(function(desc) {
-            // console.log((new Date()).getTime() + 'createAnswer', desc);
-            pc.setLocalDescription(desc, function () {
-              // console.log((new Date()).getTime() + 'data.sdp - setLocalDescription', pc.localDescription);
-              socket.emit('exchange', {'to': fromId, 'sdp': pc.localDescription });
-            }, logError);
-          }, logError);
-        }, logError);
-      } else {
-        // console.log((new Date()).getTime() + 'exchange----candidate', data.candidate);
-        pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-      }
-    }
-
-    function leave(email) {
-      // console.log((new Date()).getTime() + 'leave', email);
-      var pc = peerConnections[email];
-      if(pc){
-        pc.close();
-        delete peerConnections[email];
-      }
-      if(window.onFriendLeft) {
-        window.onFriendLeft(email);
-      }
-    }
-
-    function logError(error) {
-      console.log("logError", error);
-    }
-
-
-    //------------------------------------------------------------------------------
-    // Services
-    function countFriends(roomId, callback) {
-      socket.emit("count", roomId, (count) => {
-        console.log("Count friends result: ", count);
-        callback(count);
-      });
+      leave(user);
     }
 
     function loadLocalStream(muted,isAudio,isVideo,callback) {
@@ -593,9 +340,8 @@ app.controller('myCtrl', function($scope,$http) {
         navigator.getUserMedia({ "audio": isAudio, "video": isVideo }, function (stream) {
           // console.log((new Date()).getTime() + 'loadLocalStream');
           setLocalStream(stream);
-          localStream = stream;
           if(callback){
-              callback();
+              callback(stream);
           }
         }, function(error){
             alert(error);
@@ -604,17 +350,19 @@ app.controller('myCtrl', function($scope,$http) {
           setLocalStream(null);
       }
     }
-
-    function broadcastMessage(message) {
-      for (var key in peerConnections) {
-        var pc = peerConnections[key];
-        pc.textDataChannel.send(JSON.stringify(message));
-      }
-    }
 });
 
 function setLocalStream(stream){
+  changeLocalStream(stream);
   localStream = stream;
   var selfView = document.getElementById("selfView");
   selfView.srcObject = stream;
+}
+
+function leave(user) {
+  console.log('leave', user);
+  if(onFriendLeft != null) {
+    onFriendLeft(user);
+  }
+
 }

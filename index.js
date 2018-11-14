@@ -40,8 +40,9 @@ var port = process.env.PORT || 3000;
 var router = express.Router();
 
 // Map of token to valid user for testing only
-var mapToken = {}
+// var mapToken = {}
 app.use('/api', router);
+var userOnlineList = [];//{userId:1,socketId:2,userType:0}.0:Benh nhan, 1:bacsy
 // app.use(function(req, res, next) {
 //   res.header("Access-Control-Allow-Origin", "*");
 //   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
@@ -51,20 +52,19 @@ app.use('/api', router);
 app.use(express.static(path.join(__dirname, 'public')));
 
 
-function getUserBySocketId(socketId){
-  var token = mapSocketIdToken[socketId];
-  var user = mapToken[token];
-  return getUserActiveByUser(user);
-}
-
+// function getUserBySocketId(socketId){
+//   var token = mapSocketIdToken[socketId];
+//   var user = mapToken[token];
+//   return getUserActiveByUser(user);
+// }
+//
 function getUserActiveByUser(user){
   var userOnline = null;
   if(user){
-    for(var i = 0 ;i < userActiveList.length;i++){
-      var userActive = userActiveList[i];
-       if(userService.compareUser(userActive,user)){
+    for(var i = 0 ;i < userOnlineList.length;i++){
+      var userActive = userOnlineList[i];
+       if(userActive.userId == user.userId && userActive.userType == user.userType){
          userOnline = userActive;
-
          break;
        }
     }
@@ -72,21 +72,21 @@ function getUserActiveByUser(user){
   return userOnline;
 }
 
-router.post('/checkLogin', function(req, res) {
-    var username = req.body.username;
-    var password = req.body.password;
-    var token = userService.doCheckLogin(username,password);
-    var user = {email:username};
-
-    var userActive = getUserActiveByUser({email:username});
-    if(userActive != null){
-        res.json({ status: 'connected',token: token });
-    }else{
-        mapToken[token] = user;
-        res.json({ status: 'OK',token: token });
-    }
-
-});
+// router.post('/checkLogin', function(req, res) {
+//     var username = req.body.username;
+//     var password = req.body.password;
+//     var token = userService.doCheckLogin(username,password);
+//     var user = {userId:username};
+//
+//     var userActive = getUserActiveByUser({userId:username});
+//     if(userActive != null){
+//         res.json({ status: 'connected',token: token });
+//     }else{
+//         mapToken[token] = user;
+//         res.json({ status: 'OK',token: token });
+//     }
+//
+// });
 //
 
 
@@ -101,141 +101,178 @@ server.listen(port, () => {
 var numUsers = 0;
 var mapSocketIdToken = {};
 var socketList = [];
+var mapFriendOnline = {}; //store all friend online of user
 
-var userActiveList = [];// List of user after login success: socketID:,email,devideid,
-
-function validToken(data,callback){
-    console.log('data token',data);
-    if(mapToken[data.token]){
-        var user = mapToken[data.token]
-        var rs = callback(false,true);
-        var friends = userService.getFriendByUser(user);
-        user.socket = rs.socket;
-        user.token = data.token;
-        user.friends = friends;
-        userActiveList.push(user);
-        mapSocketIdToken[rs.socket.id] = data.token;
-
-        // Check friends active.
-        var friendRSList = [];
-        for(var i = 0; i < friends.length;i++){
-            var friend = friends[i];
-            friend.active = false;
-            for(var j = 0; j < userActiveList.length;j++){
-                var friendActive = userActiveList[j];
-                if(userService.compareUser(friendActive,friend)){
-                    friend.active = true;
-                    // socketRoom(rs.socket,null);
-                    // emit login event to all friends
-                    friendActive.socket.emit('friend-online',user.email);
-                }
-            }
-            friendRSList.push(friend);
-        }
-
-        // Return list of user online
-        rs.socket.emit('getallfriend',friendRSList);
-
-
-    }else{
-        callback(true,false);
-    }
-
-}
-
-function disconnect(socket){
-  console.log('dissssssssss');
-  // var userOnline = getUserBySocketId(socket.id);
-
-  var token = mapSocketIdToken[socket.id];
-  var user = mapToken[token];
-
-  // TODO: dang bi lap code doan nay
-  var userOnline = null;
-  if(user){
-    for(var i = 0 ;i < userActiveList.length;i++){
-      var userActive = userActiveList[i];
-       if(userService.compareUser(userActive,user)){
-         userOnline = userActive;
-         userActiveList.splice (i,1);
-         break;
-       }
+function addNewUser(userId,userType,socketId){
+  var isFound = false;
+  for(var i = 0;i < userOnlineList.length;i++){
+    var user = userOnlineList[i];
+    if((user.userId == userId && user.userType == userType) || user.socketId == socketId){
+      isFound = true;
+      user.userId = userId;
+      user.userType = userType;
+      user.socketId = socketId;
     }
   }
-  // return userOnline;
-
-    // inform to all friends
-    if(userOnline){
-      var friends = userOnline.friends;
-      friends.forEach(function(friend){
-         userActiveList.forEach(function(activeUser){
-           if(activeUser.email == friend.email){
-             io.to(activeUser.socket.id).emit("friend-disconnect",userOnline.email)
-           }
-         })
-      })
-    }
+  if(!isFound){
+    var user = {userId:userId,userType:userType,socketId:socketId};
+    userOnlineList.push(user);
+  }
 }
 
+function getUserBySocketId(socketId){
+  for(var i = 0;i < userOnlineList.length;i++){
+    if(userOnlineList[i].socketId == socketId){
+       return userOnlineList[i];
+    }
+  }
 
-function callToUser(socket,email){
-  var userOnline = getUserActiveByUser({email:email});
+  return null;
+}
+
+function getUserOnlineByUser(user){
+  var {userId, userType} = user
+  for(var i = 0;i < userOnlineList.length;i++){
+    if(userOnlineList[i].userId == userId && userOnlineList[i].userType == userType){
+       return userOnlineList[i];
+    }
+  }
+
+  return null;
+}
+
+function removeUserBySocket(socketId){
+  for(var i = 0;i < userOnlineList.length;i++){
+    var user = userOnlineList[i];
+    if(user.socketId == socketId){
+      userOnlineList.splice(i,1);
+      break;
+    }
+  }
+}
+
+function getListUserOnline(userFriends){
+  var lstUserOnline = [];
+  for(var i = 0;i < userFriends.length;i++){
+    for(var j= 0;j< userOnlineList.length;j++){
+      if(userOnlineList[j].userId == userFriends[i].userId &&
+            userOnlineList[j].userType == userFriends[i].userType){
+        lstUserOnline.push(userOnlineList[i]);
+      }
+    }
+  }
+  return lstUserOnline;
+}
+
+function exchange(socket,data){
+  console.log((new Date()).getTime() + 'exchange-id'+socket.id);
+  let user = data.to;
+  var userOnline = getUserOnlineByUser(user);
+  var fromUser = getUserBySocketId(socket.id)
+
+  // var to = io.sockets.connected[data.to];
+  if(userOnline && fromUser){
+    // let name = mapUserName[socket.id];
+    let name = "test";
+    io.to(userOnline.socketId).emit('exchange',{from:fromUser,sdp:data.sdp,candidate:data.candidate,name:name});
+  }
+}
+
+io.on('connection', function(socket) {
+  socket.on('join', function(data,fn) {
+    var {userId,userType,userFriends} = data;
+    addNewUser(userId,userType,socket.id);
+    var userOnlineList = getListUserOnline(userFriends);
+    // Tra ve thua socket id
+    mapFriendOnline[userId] = userOnlineList;
+    // Thong bao cho tat ca friend
+    userOnlineList.forEach(friend => {
+      io.to(friend.socketId).emit('friend-online',{userId:userId,userType:userType});
+    });
+    if(fn){
+      fn(userOnlineList);
+    }
+  });
+
+  socket.on('disconnect', function() {
+    var user = getUserBySocketId(socket.id);
+    if(user){
+      var friendOnline = mapFriendOnline[user.userId];
+      if(friendOnline){
+          for(var i = 0 ;i < friendOnline.length;i++){
+            var friendOnline = friendOnline[i];
+            io.to(friendOnline.socketId).emit("friend-disconnect",friendOnline)
+          }
+      }
+    }
+    removeUserBySocket(socket.id);
+  });
+
+});
+
+function callToUser(socket,user){
+  var userOnline = getUserActiveByUser(user);
   var fromUser = getUserBySocketId(socket.id);
-  io.to(userOnline.socket.id).emit("call-from",fromUser.email);
+  if(userOnline && fromUser){
+      io.to(userOnline.socketId).emit("call-from",fromUser);
+  }
 }
 
 // inform to start call is ringing in end call
-function ringingCall(socket,email){
-    var user = getUserActiveByUser({email:email});
+function ringingCall(socket,user){
+    var user = getUserActiveByUser(user);
     var socketUser = getUserBySocketId(socket.id);
-    io.to(user.socket.id).emit("ringing",socketUser.email);
+    if(user && socketUser){
+        io.to(user.socketId).emit("ringing",socketUser);
+    }
 }
 
-function refuseCall(socket,email){
-  var user = getUserActiveByUser({email:email});
-  var socketUser = getUserBySocketId(socket.id);
-  io.to(user.socket.id).emit("refuse-call-from",socketUser.email);
-}
+// function endCallTo(socket,user){
+//   var user = getUserActiveByUser(user);
+//   var socketUser = getUserBySocketId(socket.id);
+//   if(user && socketUser){
+//       io.to(user.socketId).emit("end-call-from",socketUser);
+//   }
+// }
 
-function endCallTo(socket,email){
-  var user = getUserActiveByUser({email:email});
-  var socketUser = getUserBySocketId(socket.id);
-  io.to(user.socket.id).emit("end-call-from",socketUser.email);
-}
-
-function finishCall(socket,email){
-  var user = getUserActiveByUser({email:email});
+function finishCall(socket,user){
+  var user = getUserActiveByUser(user);
   var socketUser = getUserBySocketId(socket.id);
   if(user && socketUser){
-    io.to(user.socket.id).emit("finish-calling",socketUser.email);
+    io.to(user.socketId).emit("finish-call",socketUser);
   }
 }
 
-function startCall(socket,email){
-  var user = getUserActiveByUser({email:email});
+function startCall(socket,user){
+  var user = getUserActiveByUser(user);
   var socketUser = getUserBySocketId(socket.id);
-  io.to(user.socket.id).emit("start-calling",socketUser.email);
+  if(user && socketUser){
+      io.to(user.socketId).emit("start-call",socketUser);
+  }
 }
 
-function busyNow(socket,email){
-  var user = getUserActiveByUser({email:email});
+function busyNow(socket,user){
+  var user = getUserActiveByUser(user);
   var socketUser = getUserBySocketId(socket.id);
-  io.to(user.socket.id).emit("busy-now",socketUser.email);
+  if(user && socketUser){
+      io.to(user.socketId).emit("busy-now",socketUser);
+  }
 }
 
 function sendMsg(socket,data){
-  var user = getUserActiveByUser({email:data.email});
+  var user = getUserActiveByUser(data.user);
   var socketUser = getUserBySocketId(socket.id);
-  io.to(user.socket.id).emit("send-msg",{email:socketUser.email,msg:data.msg});
+  if(user && socketUser){
+      io.to(user.socketId).emit("send-msg",{user:socketUser,msg:data.msg});
+  }
 }
 
-var configAuth = {authenticate:validToken,disconnect:disconnect};
-// Filter user
-socketioAuth(io,configAuth);
+// var configAuth = {authenticate:validToken,disconnect:disconnect};
+// // Filter user
+// socketioAuth(io,configAuth);
 
 var configRoom = {
   callToUser:callToUser,
-  refuseCall:refuseCall,
   ringingCall:ringingCall,
   startCall: startCall,
   finishCall: finishCall,
@@ -243,19 +280,6 @@ var configRoom = {
   sendMsg:sendMsg
 };
 socketIORoom(io,configRoom);
-
-function exchange(socket,data){
-  console.log((new Date()).getTime() + 'exchange-id'+socket.id);
-  let email = data.to;
-  var user = getUserActiveByUser({email:email});
-  var socketUser = getUserBySocketId(socket.id);
-  // var to = io.sockets.connected[data.to];
-  if(user != null){
-    // let name = mapUserName[socket.id];
-    let name = "test";
-    user.socket.emit('exchange',{from:socketUser.email,sdp:data.sdp,candidate:data.candidate,name:name});
-  }
-}
 
 var configRTC = {exchange:exchange};
 socketRTC(io,configRTC);

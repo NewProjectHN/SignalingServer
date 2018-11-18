@@ -1,7 +1,7 @@
 
 var app = angular.module('myApp', []);
 var deviceId = Date.now();
-var SERVER_URL = 'http://localhost:3000';
+var SERVER_URL = '';
 let localStream = null;
 
 window.onFriendCallback = (userId, stream) => {

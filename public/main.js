@@ -337,7 +337,7 @@ app.controller('myCtrl', function($scope,$http) {
       }
 
       $scope.isLogin = true;
-      let config = {'socketURL':'http://localhost:3000'};
+      let config = {'socketURL':SERVER_URL};
         let user = {userId:$scope.userId,userType:$scope.userType,userFriends:userFriends};
         let callback = {
           getFriendOnlineCB:$scope.getFriendOnlineCB,//Khi co danh sach ban online tra ve

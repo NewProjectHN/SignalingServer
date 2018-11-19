@@ -140,7 +140,7 @@ app.controller('myCtrl', function($scope,$http) {
       lstMsg.push(msg);
       $scope.mapAllMsg[userId] = lstMsg;
       if($scope.currentChat && userId == $scope.currentChat.userId && userType == $scope.currentChat.userType){
-        $scope.currentListMsg.push(msg);
+        $scope.currentListMsg = lstMsg;
         var objDiv = document.getElementById("chat-msg-content");
         objDiv.scrollTop = objDiv.scrollHeight;
       }

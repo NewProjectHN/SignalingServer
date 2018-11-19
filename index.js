@@ -192,10 +192,22 @@ io.on('connection', function(socket) {
       if(friend && friend.socketId){
         io.to(friend.socketId).emit('friend-online',{userId:userId,userType:userType});
       }else{
-        console.log('ERRROR FRIEND:'+friend.userId);
+        console.log('ERRROR FRIEND:');
       }
     });
-    io.to(socket.id).emit('init-data-friend',{friendOnlineList: userOnlineList,missCallList:mapMissCall[userId],missMsgList:mapMissMsg[userId]});
+    var missCallList = [];
+    var missMsgList = [];
+    if(mapMissCall[userId]){
+      mapMissCall[userId].forEach(e=>{
+        missCallList.push(e);
+      })
+    }
+    if(mapMissMsg[userId]){
+      mapMissMsg[userId].forEach(e=>{
+        missMsgList.push(e);
+      })
+    }
+    io.to(socket.id).emit('init-data-friend',{friendOnlineList: userOnlineList,missCallList:missCallList,missMsgList:missMsgList});
     mapMissCall[userId] = [];
     mapMissMsg[userId] = [];
     // if(fn){
@@ -293,7 +305,8 @@ function sendMsg(socket,data){
       if(!lstMsg){
         lstMsg = [];
       }
-      lstMsg.push({user:user,msg:data.msg});
+      lstMsg.push({user:data.user,msg:data.msg});
+      mapMissMsg[data.user.userId] = lstMsg;
     }
       
   }

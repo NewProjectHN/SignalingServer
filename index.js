@@ -42,7 +42,12 @@ var router = express.Router();
 // Map of token to valid user for testing only
 // var mapToken = {}
 app.use('/api', router);
+// Danh sach user online
 var userOnlineList = [];//{userId:1,socketId:2,userType:0}.0:Benh nhan, 1:bacsy
+// Chatroom
+var mapFriendOnline = {}; //store all friend online of user
+var mapMissCall = {};// luu cac cuoc goi nho cua user
+var mapMissMsg = {}; // luu cac tin nhan lo cua user
 // app.use(function(req, res, next) {
 //   res.header("Access-Control-Allow-Origin", "*");
 //   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
@@ -97,13 +102,7 @@ server.listen(port, () => {
 // Routing
 //app.use(express.static(path.join(__dirname, 'public')));
 
-// Chatroom
-var numUsers = 0;
-var mapSocketIdToken = {};
-var socketList = [];
-var mapFriendOnline = {}; //store all friend online of user
-var mapMissCall = {};// luu cac cuoc goi nho cua user
-var mapMissMsg = {}; // luu cac tin nhan lo cua user
+
 
 function addNewUser(userId,userType,socketId){
   var isFound = false;
@@ -312,22 +311,25 @@ function sendMsg(socket,data){
   }
 }
 
-function addNewFriend(socket,user){
-  var user = getUserActiveByUser(user);
-  var socketUser = getUserBySocketId(socket.id);
-  // Trong truong hop ban moi add online thi gui phan hoi lai
-  if(user && socketUser){
-    //add them vao danh sach ban be
-    var tmpListOnline = mapFriendOnline[user.userId];
-    tmpListOnline.push(socketUser);
-    mapFriendOnline[user.userId] = tmpListOnline;
+function addNewFriend(socket,users){
+  for(var i = 0;i < users.length;i++){
+    var user = users[i];
+    user = getUserActiveByUser(user);
+    var socketUser = getUserBySocketId(socket.id);
+    // Trong truong hop ban moi add online thi gui phan hoi lai
+    if(user && socketUser){
+      //add them vao danh sach ban be
+      var tmpListOnline = mapFriendOnline[user.userId];
+      tmpListOnline.push(socketUser);
+      mapFriendOnline[user.userId] = tmpListOnline;
 
-    tmpListOnline = mapFriendOnline[socketUser.userId];
-    tmpListOnline.push(user);
-    mapFriendOnline[socketUser.usreId] = mapFriendOnline;
+      tmpListOnline = mapFriendOnline[socketUser.userId];
+      tmpListOnline.push(user);
+      mapFriendOnline[socketUser.usreId] = mapFriendOnline;
 
-    io.to(user.socketId).emit('friend-online',socketUser);
-    io.to(socket.id).emit('friend-online',user);
+      io.to(user.socketId).emit('friend-online',socketUser);
+      io.to(socket.id).emit('friend-online',user);
+    }
   }
 }
 

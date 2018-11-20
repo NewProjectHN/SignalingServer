@@ -4,18 +4,13 @@ try{
 }catch(err){
   IS_BROWSER = true;
 }
+// Dung cho mobile
+// import {RTCSessionDescription, RTCPeerConnection, RTCIceCandidate} from "react-native-webrtc";
 
-if(IS_BROWSER) {
-  WebRTC = {
-    MediaStreamTrack: window.MediaStreamTrack,
-    getUserMedia: window.navigator.getUserMedia,
-    RTCPeerConnection: window.RTCPeerConnection,
-    RTCSessionDescription: window.RTCSessionDescription,
-    RTCIceCandidate: window.RTCIceCandidate
-  }
-} else {
-  WebRTC = require('react-native-webrtc');
-}
+// Dung cho trinh duyet
+RTCPeerConnection = window.RTCPeerConnection,
+RTCSessionDescription = window.RTCSessionDescription,
+RTCIceCandidate = window.RTCIceCandidate
 
 let socket = null;
 // let onFriendLeftCallback = null;
@@ -140,7 +135,15 @@ function createSocketRTC(config,_user,_callback){
   socket.on("finish-call", function(user) {
     hasCall = false;
     localStream = null;
-    delete peerConnections[user.userId];
+    let {userId} = user;
+    var pc = peerConnections[userId];
+    if(pc != null){
+      pc.close();
+    }
+    if(pc){
+      delete peerConnections[userId];
+    }
+
     let {endCallCB} = callback;
     if(endCallCB){
       endCallCB(user);
@@ -160,7 +163,7 @@ function createSocketRTC(config,_user,_callback){
 }
 
 function createPeerConnection(user, isOffer) {
-  var retVal = new WebRTC.RTCPeerConnection(configuration);
+  var retVal = new RTCPeerConnection(configuration);
   var {userId} = user;
   peerConnections[userId] = retVal;
 
@@ -201,7 +204,7 @@ function createPeerConnection(user, isOffer) {
 
   retVal.onaddstream = function (event) {
 
-    console.log('onaddstream');
+    console.log('nvTien - onaddstream success...');
     //var element = document.createElement('video');
     //element.id = "remoteView" + socketId;
     //element.autoplay = 'autoplay';
@@ -209,8 +212,10 @@ function createPeerConnection(user, isOffer) {
     //remoteViewContainer.appendChild(element);
     let startCallSuccessCB = null;
     if(callback){
+      console.log('nvTien - onaddstream return callback success...');
       startCallSuccessCB = callback.startCallSuccessCB;
     }else{
+      console.log('nvTien - onaddstream return parent.callback success...');
       startCallSuccessCB = parent.callback.startCallSuccessCB;
     }
     
@@ -219,6 +224,7 @@ function createPeerConnection(user, isOffer) {
     }
   }
   if(localStream != null){
+    console.log(`nvTien - rtcLib onaddStream data stream ${JSON.stringify(localStream)}`);
     retVal.addStream(localStream);
   }
 
@@ -276,11 +282,12 @@ function disconect(){
 }
 
 function makeCall(user,_localStream){
+  console.log(`nvTien - rtcLib makeCall dataUser: ${JSON.stringify(user)} data localStream: ${JSON.stringify(_localStream)}`);
   localStream = _localStream;
   socket.emit("call-to",user);
 }
 
-function sendMsg(user,msg,callback){
+function sendMsg(user,msg){
   socket.emit("send-msg",{user,msg});
 
 }
@@ -295,11 +302,20 @@ function receiveCall(user){
 
 function finishCall(user){
   hasCall = false;
+  localStream = null;
+  let {userId} = user;
+  var pc = peerConnections[userId];
+  if(pc != null){
+    pc.close();
+  }
+  if(pc){
+    delete peerConnections[userId];
+  }
   socket.emit("finish-call",user);
 }
 
-function addNewFriend(user){
-  socket.emit("add-new-friend",user);
+function addNewFriend(users){
+  socket.emit("add-new-friend",users);
 }
 //------------------------------------------------------------------------------
 // Exports

@@ -112,14 +112,22 @@ app.controller('myCtrl', function($scope,$http) {
       if($scope.newFriend.userId == null){
         alert('Insert new friend user id');
       }else{
-        var newUser = {userId:$scope.newFriend.userId,userType:$scope.newFriend.userType,active:false,friends:[]};
-        $scope.friendAllList.push(newUser);
+        var userIdArr = $scope.newFriend.userId.split(",");
+        var newFriendUsers = [];
+        userIdArr.forEach(uId =>{
+          var newUser = {userId:uId,userType:$scope.newFriend.userType,active:false,friends:[]};
+          $scope.friendAllList.push(newUser);
+          newFriendUsers.push(newUser);
+        });
+        
         $scope.friendAllList.forEach(friend =>{
           if(friend.userId == $scope.userId && friend.userType == $scope.userType){
-            friend.friends.push($scope.newFriend.userId);
+            userIdArr.forEach(uid =>{
+              friend.friends.push(uid);
+            });
           }
         })
-        addNewFriend(newUser);
+        addNewFriend(newFriendUsers);
         $scope.newFriend = null;
       }
     }

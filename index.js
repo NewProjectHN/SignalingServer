@@ -312,6 +312,8 @@ function sendMsg(socket,data){
 }
 
 function addNewFriend(socket,users){
+
+  var userOnlineList = [];
   for(var i = 0;i < users.length;i++){
     var user = users[i];
     user = getUserActiveByUser(user);
@@ -328,9 +330,11 @@ function addNewFriend(socket,users){
       mapFriendOnline[socketUser.usreId] = mapFriendOnline;
 
       io.to(user.socketId).emit('friend-online',socketUser);
-      io.to(socket.id).emit('friend-online',user);
+      userOnlineList.push(user)
     }
   }
+
+  io.to(socket.id).emit('init-data-friend',{friendOnlineList: userOnlineList});
 }
 
 // var configAuth = {authenticate:validToken,disconnect:disconnect};

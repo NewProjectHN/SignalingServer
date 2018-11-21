@@ -58,29 +58,38 @@ function createSocketRTC(config,_user,_callback){
   }
 
   socket.on('exchange', function(data){
-    console.log((new Date()).getTime() + " - exchange-from-server:", data);
     exchange(data);
   });
 
   socket.on('connect', function(data) {
-    console.log('connect');
+    let {onConnectSocket} = callback;
+    if(onConnectSocket){
+      onConnectSocket();
+    }
     socket.emit('join', user);
   });
 
+  
+  socket.on("disconnect", function(data) {
+    let {onDisconectSocket} = callback;
+    if(onDisconectSocket){
+      onDisconectSocket();
+    }
+  });
+
   socket.on('init-data-friend', function(data) {
-    console.log('connect');
     let {getFriendOnlineCB} = callback;
-    getFriendOnlineCB(data.friendOnlineList,data.missCallList,data.missMsgList);
+    if(getFriendOnlineCB){
+      getFriendOnlineCB(data.friendOnlineList,data.missCallList,data.missMsgList);
+    }
+    
   });
 
   socket.on('authenticated', function(data) {
-    console.log('authenticated');
+
   });
 
   socket.on("friend-online", function(user) {
-    //new friend:
-
-    console.log("New friend joint conversation: ", user);
     let {newFriendOnlineCB} = callback;
     if(newFriendOnlineCB){
       newFriendOnlineCB(user);
@@ -88,8 +97,6 @@ function createSocketRTC(config,_user,_callback){
   });
 
   socket.on("friend-disconnect", function(user) {
-    // alert(1)
-    //new friend:
     let {disconectFriend} = callback;
     if(disconectFriend){
       disconectFriend(user);
@@ -97,15 +104,15 @@ function createSocketRTC(config,_user,_callback){
   });
 
   socket.on("call-from", function(user) {
-    // alert(1)
-    //new friend:
     let {onNewCallCB} = callback;
     if(hasCall){
         socket.emit('busy-now',user);
     }else{
       hasCall = true;
       socket.emit('ringing',user);
-      onNewCallCB(user);
+      if(onNewCallCB){
+        onNewCallCB(user);
+      }
     }
   });
 
@@ -156,10 +163,6 @@ function createSocketRTC(config,_user,_callback){
       onNewMsgCB(data.user,data.msg);
     }
   });
-
-  socket.on("disconect", function(data) {
-    disconect();
-  });
 }
 
 function createPeerConnection(user, isOffer) {
@@ -168,7 +171,6 @@ function createPeerConnection(user, isOffer) {
   peerConnections[userId] = retVal;
 
   retVal.onicecandidate = function (event) {
-    console.log('onicecandidate');
     if (event.candidate) {
       socket.emit('exchange', {'to': user, 'candidate': event.candidate});
     }
@@ -176,46 +178,31 @@ function createPeerConnection(user, isOffer) {
 
   function createOffer() {
     retVal.createOffer(function(desc) {
-      console.log('createOffer', desc);
       retVal.setLocalDescription(desc, function () {
-        console.log('setLocalDescription', retVal.localDescription);
         socket.emit('exchange', {'to': user, 'sdp': retVal.localDescription });
       }, logError);
     }, logError);
   }
 
   retVal.onnegotiationneeded = function () {
-    console.log('onnegotiationneeded');
     if (isOffer) {
       createOffer();
     }
   }
 
   retVal.oniceconnectionstatechange = function(event) {
-    // console.log('oniceconnectionstatechange');
-    // if (event.target.iceConnectionState === 'connected') {
-    //   createDataChannel();
-    // }
+
   };
 
   retVal.onsignalingstatechange = function(event) {
-    console.log('onsignalingstatechange');
+
   };
 
   retVal.onaddstream = function (event) {
-
-    console.log('nvTien - onaddstream success...');
-    //var element = document.createElement('video');
-    //element.id = "remoteView" + socketId;
-    //element.autoplay = 'autoplay';
-    //element.src = URL.createObjectURL(event.stream);
-    //remoteViewContainer.appendChild(element);
     let startCallSuccessCB = null;
     if(callback){
-      console.log('nvTien - onaddstream return callback success...');
       startCallSuccessCB = callback.startCallSuccessCB;
     }else{
-      console.log('nvTien - onaddstream return parent.callback success...');
       startCallSuccessCB = parent.callback.startCallSuccessCB;
     }
     
@@ -224,7 +211,6 @@ function createPeerConnection(user, isOffer) {
     }
   }
   if(localStream != null){
-    console.log(`nvTien - rtcLib onaddStream data stream ${JSON.stringify(localStream)}`);
     retVal.addStream(localStream);
   }
 
@@ -236,34 +222,27 @@ function exchange(data) {
   var fromId = user.userId;
   var pc;
   if (fromId in peerConnections) {
-    console.log((new Date()).getTime() + 'id in peer');
     pc = peerConnections[fromId];
   } else {
-    console.log((new Date()).getTime() + 'id not in peer');
     pc = createPeerConnection(user, false);
     peerConnections[fromId] = pc;
   }
 
   if (data.sdp) {
-    // console.log((new Date()).getTime() + 'exchange sdp', data);
     pc.setRemoteDescription(new RTCSessionDescription(data.sdp), function () {
       if (pc.remoteDescription.type == "offer")
       pc.createAnswer(function(desc) {
-        // console.log((new Date()).getTime() + 'createAnswer', desc);
         pc.setLocalDescription(desc, function () {
-          // console.log((new Date()).getTime() + 'data.sdp - setLocalDescription', pc.localDescription);
           socket.emit('exchange', {'to': user, 'sdp': pc.localDescription });
         }, logError);
       }, logError);
     }, logError);
   } else {
-    // console.log((new Date()).getTime() + 'exchange----candidate', data.candidate);
     pc.addIceCandidate(new RTCIceCandidate(data.candidate));
   }
 }
 
 function leave(socketId) {
-  console.log('leave', socketId);
   var pc = peerConnections[socketId];
   if(pc != null){
     pc.close();
@@ -274,15 +253,9 @@ function leave(socketId) {
 }
 
 function logError(error) {
-  console.log("logError", error);
-}
-
-function disconect(){
-  // socket.emit("disconnect",user);
 }
 
 function makeCall(user,_localStream){
-  console.log(`nvTien - rtcLib makeCall dataUser: ${JSON.stringify(user)} data localStream: ${JSON.stringify(_localStream)}`);
   localStream = _localStream;
   socket.emit("call-to",user);
 }
@@ -326,7 +299,6 @@ if(!IS_BROWSER) {
     finishCall,
     receiveCall,
     sendMsg,
-    disconect,
     addNewFriend,
     changeLocalStream
   }

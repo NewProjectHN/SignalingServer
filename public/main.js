@@ -1,7 +1,7 @@
 
 var app = angular.module('myApp', []);
 var deviceId = Date.now();
-var SERVER_URL = '';
+var SERVER_URL = 'http://localhost:3000';
 let localStream = null;
 
 window.onFriendCallback = (userId, stream) => {
@@ -330,6 +330,14 @@ app.controller('myCtrl', function($scope,$http) {
       $scope.$apply();
     }
 
+    $scope.onDisconectSocket = function(){
+      alert('discon');
+    }
+
+    $scope.onConnectSocket = function(){
+      alert('connect');
+    }
+
     $scope.join = function() {
       var isFound = false;
       for(var i = 0;i < $scope.friendAllList.length;i++){
@@ -356,7 +364,9 @@ app.controller('myCtrl', function($scope,$http) {
           onNewCallCB:$scope.onNewCallCB,// khi co cuoc goi moi
           onNewMsgCB:$scope.onNewMsgCB,// khi co tin nhan moi
           onBusyCallCB:$scope.onBusyCallCB,
-          offlineCallNow: $scope.offlineCallNow
+          offlineCallNow: $scope.offlineCallNow,
+          onDisconectSocket: $scope.onDisconectSocket,
+          onConnectSocket: $scope.onConnectSocket,
         };
         createSocketRTC(config,user,callback);
     }

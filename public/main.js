@@ -1,10 +1,11 @@
 
 var app = angular.module('myApp', []);
 var deviceId = Date.now();
-var SERVER_URL = 'http://localhost:3000';
+var SERVER_URL = '';
 let localStream = null;
 
 window.onFriendCallback = (userId, stream) => {
+  onFriendLeft({userId:userId});
   let thumbnailElement = document.createElement("div");
   thumbnailElement.className = "video-thumbnail";
   thumbnailElement.id = "friend-" + userId;
@@ -225,6 +226,7 @@ app.controller('myCtrl', function($scope,$http) {
     }
 
     $scope.newFriendOnlineCB = function(user){
+      console.log('New Friend Online:'+user.userId);
       var isFound = false;
       for(var i = 0;i < $scope.friendAllList.length;i++){
         if($scope.friendAllList[i].userId == user.userId

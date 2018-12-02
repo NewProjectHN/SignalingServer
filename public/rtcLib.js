@@ -48,7 +48,6 @@ function createSocketRTC(config,_user,_callback){
   user = _user;
   callback = _callback;
   let {socketURL} = config;
-  let {getFriendOnlineCB} = callback;
 
   if(IS_BROWSER) {
     socket = io(socketURL);
@@ -62,15 +61,18 @@ function createSocketRTC(config,_user,_callback){
   });
 
   socket.on('connect', function(data) {
+    console.log('socket ID connect:'+ socket.id);
     let {onConnectSocket} = callback;
     if(onConnectSocket){
       onConnectSocket();
     }
+    console.log('user join:',user);
     socket.emit('join', user);
   });
 
   
   socket.on("disconnect", function(data) {
+    console.log('socket ID disconnect:'+ socket.id);
     let {onDisconectSocket} = callback;
     if(onDisconectSocket){
       onDisconectSocket();
@@ -81,6 +83,24 @@ function createSocketRTC(config,_user,_callback){
     let {getFriendOnlineCB} = callback;
     if(getFriendOnlineCB){
       getFriendOnlineCB(data.friendOnlineList,data.missCallList,data.missMsgList);
+    }
+
+    // kiem tra xem trong danh sach ban be online da co
+    if(data && data.friendOnlineList){
+      data.friendOnlineList.forEach(friendOnline => {
+        var friends = user.userFriends;
+        var isFound = false;
+        for(var i = 0 ;i < friends.length;i++){
+          var friend = friends[i];
+          if(friend.userId == friendOnline.userId && friend.userType == friendOnline.userType ){
+            isFound = true;
+            break;
+          }
+        }
+        if(!isFound){
+          friends.push(friendOnline);
+        }
+      })
     }
     
   });
@@ -184,10 +204,14 @@ function createPeerConnection(user, isOffer) {
     }, logError);
   }
 
-  retVal.onnegotiationneeded = function () {
-    if (isOffer) {
+  retVal.onnegotiationneeded = function (event) {
+    console.log('onnegotiationneeded:',event.candidate);
+    // Bo doan nay de khi co thay doi ve camera duoc tao lai offer
+    // Check lai ve hieu nang
+    // if (isOffer) {
       createOffer();
-    }
+    // }
+
   }
 
   retVal.oniceconnectionstatechange = function(event) {
@@ -199,6 +223,7 @@ function createPeerConnection(user, isOffer) {
   };
 
   retVal.onaddstream = function (event) {
+    console.log('on add stream');
     let startCallSuccessCB = null;
     if(callback){
       startCallSuccessCB = callback.startCallSuccessCB;
@@ -242,20 +267,15 @@ function exchange(data) {
   }
 }
 
-function leave(socketId) {
-  var pc = peerConnections[socketId];
-  if(pc != null){
-    pc.close();
-  }
-  if(pc != undefined){
-    delete peerConnections[socketId];
-  }
-}
-
 function logError(error) {
 }
 
 function makeCall(user,_localStream){
+  if (socket.connected === false &&
+    socket.connecting === false) {
+    console.log('NDLONG reconnect');
+    socket.connect()
+  }
   localStream = _localStream;
   socket.emit("call-to",user);
 }
@@ -265,8 +285,27 @@ function sendMsg(user,msg){
 
 }
 
+function removeLocalStream(){
+  if (localStream) {
+    for (const id in peerConnections) {
+      const pc = peerConnections[id];
+      pc && pc.removeStream(localStream);
+    }
+    localStream.getTracks().forEach((t) => {
+      localStream.removeTrack(t);
+    });
+    // localStream.removeStream();
+  }
+}
+
 function changeLocalStream(_localStream){
+  removeLocalStream();
   localStream = _localStream;
+  for (const id in peerConnections) {
+    console.log('id peer',id);
+    const pc = peerConnections[id];
+    pc && pc.addStream(localStream);
+  }
 }
 
 function receiveCall(user){
@@ -274,6 +313,7 @@ function receiveCall(user){
 }
 
 function finishCall(user){
+  removeLocalStream();
   hasCall = false;
   localStream = null;
   let {userId} = user;
@@ -288,6 +328,22 @@ function finishCall(user){
 }
 
 function addNewFriend(users){
+  if(user){
+    var friends = user.userFriends;
+    users.forEach((user =>{
+      var isFound = false;
+      for(var i = 0;i < friends.length;i++){
+        var friend = friends[i];
+        if(friend.userId == user.userId && friend.userType == user.userType){
+          isFound = true;
+          break;  
+        }
+      }
+      if(!isFound){
+        friends.push(user);
+      }
+    }))
+  }
   socket.emit("add-new-friend",users);
 }
 //------------------------------------------------------------------------------

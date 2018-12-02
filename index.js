@@ -32,8 +32,8 @@ app.use(bodyParser.urlencoded({ extended: true })); // support encoded bodies
 // OPen C:\OpenSSL\bin\openssl
 // Genkey with this command: req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -keyout privateKey.key -out certificate.crt
 // app.enable('trust proxy');
-// var server = require('https').createServer(httpsOptions,app);
-var server = require('http').createServer(app);
+var server = require('https').createServer(httpsOptions,app);
+// var server = require('http').createServer(app);
 var io = require('socket.io')(server);
 var port = process.env.PORT || 3000;
 
@@ -158,7 +158,7 @@ function getListUserOnline(userFriends){
     for(var j= 0;j< userOnlineList.length;j++){
       if(userOnlineList[j].userId == userFriends[i].userId &&
             userOnlineList[j].userType == userFriends[i].userType){
-        lstUserOnline.push(userOnlineList[i]);
+        lstUserOnline.push(userOnlineList[j]);
       }
     }
   }
@@ -180,18 +180,23 @@ function exchange(socket,data){
 }
 
 io.on('connection', function(socket) {
+
+  console.log('new socket connect');
+
   socket.on('join', function(data) {
     var {userId,userType,userFriends} = data;
     addNewUser(userId,userType,socket.id);
+    console.log('userFriends',userFriends);
     var userOnlineList = getListUserOnline(userFriends);
     // Tra ve thua socket id
     mapFriendOnline[userId] = userOnlineList;
+    console.log('useronlinelist',userOnlineList);
     // Thong bao cho tat ca friend
     userOnlineList.forEach(friend => {
       if(friend && friend.socketId){
         io.to(friend.socketId).emit('friend-online',{userId:userId,userType:userType});
       }else{
-        console.log('ERRROR FRIEND:');
+        console.log('ERRROR FRIEND:'+userId);
       }
     });
     var missCallList = [];

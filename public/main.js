@@ -221,6 +221,9 @@ app.controller('myCtrl', function($scope,$http) {
       }
 
       if(missMsgList && missMsgList.length > 0){
+        missMsgList.forEach(missMsg =>{
+          console.log('from:' + missMsg.user.userId + '|MSG:' + missMsg.msg );
+        })
         alert('You have miss msg:'+missMsgList.length);
       }
     }

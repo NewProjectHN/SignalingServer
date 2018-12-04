@@ -43,16 +43,16 @@ var router = express.Router();
 // var mapToken = {}
 app.use('/api', router);
 // Danh sach user online
-var userOnlineList = [];//{userId:1,socketId:2,userType:0}.0:Benh nhan, 1:bacsy
+var userOnlineList = [];//{userId:1,socketId:2,userType:0}.1:Benh nhan, 0:bacsy
 // Chatroom
 var mapFriendOnline = {}; //store all friend online of user
 var mapMissCall = {};// luu cac cuoc goi nho cua user
 var mapMissMsg = {}; // luu cac tin nhan lo cua user
-// app.use(function(req, res, next) {
-//   res.header("Access-Control-Allow-Origin", "*");
-//   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-//   next();
-// });
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
+});
 // Routing
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -77,23 +77,17 @@ function getUserActiveByUser(user){
   return userOnline;
 }
 
-// router.post('/checkLogin', function(req, res) {
-//     var username = req.body.username;
-//     var password = req.body.password;
-//     var token = userService.doCheckLogin(username,password);
-//     var user = {userId:username};
-//
-//     var userActive = getUserActiveByUser({userId:username});
-//     if(userActive != null){
-//         res.json({ status: 'connected',token: token });
-//     }else{
-//         mapToken[token] = user;
-//         res.json({ status: 'OK',token: token });
-//     }
-//
-// });
-//
-
+router.post('/sendMsgToUser', function(req, res) {
+    var fromUser = req.body.fromUser;
+    var toUser = req.body.toUser;
+    var msg = req.body.msg;
+    var ok = sendMsgFromTo(fromUser,toUser,msg);
+    if(ok){
+      res.json({ status: 'success'});
+    }else{
+      res.json({ status: 'user_not_online'});
+    }
+});
 
 server.listen(port, () => {
   console.log('Server listening at port %d', port);
@@ -131,17 +125,6 @@ function getUserBySocketId(socketId){
   return null;
 }
 
-function getUserOnlineByUser(user){
-  var {userId, userType} = user
-  for(var i = 0;i < userOnlineList.length;i++){
-    if(userOnlineList[i].userId == userId && userOnlineList[i].userType == userType){
-       return userOnlineList[i];
-    }
-  }
-
-  return null;
-}
-
 function removeUserBySocket(socketId){
   for(var i = 0;i < userOnlineList.length;i++){
     var user = userOnlineList[i];
@@ -168,7 +151,7 @@ function getListUserOnline(userFriends){
 function exchange(socket,data){
   console.log((new Date()).getTime() + 'exchange-id'+socket.id);
   let user = data.to;
-  var userOnline = getUserOnlineByUser(user);
+  var userOnline = getUserActiveByUser(user);
   var fromUser = getUserBySocketId(socket.id)
 
   // var to = io.sockets.connected[data.to];
@@ -301,18 +284,22 @@ function busyNow(socket,user){
 function sendMsg(socket,data){
   var user = getUserActiveByUser(data.user);
   var socketUser = getUserBySocketId(socket.id);
-  if(socketUser){
-    if(user){
-      io.to(user.socketId).emit("send-msg",{user:socketUser,msg:data.msg});
-    }else{
-      var lstMsg = mapMissMsg[data.user.userId];
-      if(!lstMsg){
-        lstMsg = [];
-      }
-      lstMsg.push({user:data.user,msg:data.msg});
-      mapMissMsg[data.user.userId] = lstMsg;
+  sendMsgFromTo(socketUser,user,data.msg);
+}
+
+function sendMsgFromTo(fromUser,toUser,msg){
+  var userOnline = getUserActiveByUser(toUser);
+  if(userOnline){
+    io.to(userOnline.socketId).emit("send-msg",{user:fromUser,msg:msg});
+    return true;
+  }else{
+    var lstMsg = mapMissMsg[toUser.userId];
+    if(!lstMsg){
+      lstMsg = [];
     }
-      
+    lstMsg.push({user:fromUser,msg:msg});
+    mapMissMsg[toUser.userId] = lstMsg;
+    return false;
   }
 }
 

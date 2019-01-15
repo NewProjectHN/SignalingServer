@@ -229,7 +229,7 @@ app.controller('myCtrl', function($scope,$http) {
     }
 
     $scope.newFriendOnlineCB = function(user){
-      console.log('New Friend Online:'+user.userId);
+      console.log('New Friend Online:'+user.teststring);
       var isFound = false;
       for(var i = 0;i < $scope.friendAllList.length;i++){
         if($scope.friendAllList[i].userId == user.userId
@@ -360,6 +360,7 @@ app.controller('myCtrl', function($scope,$http) {
       $scope.isLogin = true;
       let config = {'socketURL':SERVER_URL};
         let user = {userId:$scope.userId,userType:$scope.userType,userFriends:userFriends};
+        user.teststring = '1234123'+$scope.userId;
         let callback = {
           getFriendOnlineCB:$scope.getFriendOnlineCB,//Khi co danh sach ban online tra ve
           newFriendOnlineCB:$scope.newFriendOnlineCB,//khi co them 1 user online

@@ -1,30 +1,9 @@
-# Socket.IO Chat
+##Start to develop
+##run
+nodemon index.js
 
-A simple chat demo for socket.io
-
-## How to use
-
-```
-$ cd socket.io
-$ npm install
-$ cd examples/chat
-$ npm install
-$ npm start
-```
-
-And point your browser to `http://localhost:3000`. Optionally, specify
-a port by supplying the `PORT` env variable.
-
-## Features
-
-- Multiple users can join a chat room by each entering a unique username
-on website load.
-- Users can type chat messages to the chat room.
-- A notification is sent to all users when a user joins or leaves
-the chatroom.
-
-## Modules
-- WebRTC module can be deployed on NodeJS in folder public
-
-##Debug
-node --inspect-brk=3000 index.js
+##debug in visual stuido
+#1. Run follow command
+node --inspect-brk=9229 index.js
+#2. open Debug -> Start Debugging
+#3. F9 -> add a break point

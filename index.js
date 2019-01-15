@@ -11,8 +11,8 @@ var cors = require('cors');
 app.use(cors());
 app.options('*', cors());
 
-var socketioAuth = require('./lib/socket-auth.js');
-var userService = require('./lib/user-service.js');
+// var socketioAuth = require('./lib/socket-auth.js');
+// var userService = require('./lib/user-service.js');
 var socketIORoom = require('./lib/socket-room.js');
 var socketRTC = require('./lib/socket-rtc.js');
 
@@ -98,7 +98,8 @@ server.listen(port, () => {
 
 
 
-function addNewUser(userId,userType,socketId){
+function addNewUser(newUser,socketId){
+  let {userId,userType} = newUser;
   var isFound = false;
   for(var i = 0;i < userOnlineList.length;i++){
     var user = userOnlineList[i];
@@ -110,8 +111,8 @@ function addNewUser(userId,userType,socketId){
     }
   }
   if(!isFound){
-    var user = {userId:userId,userType:userType,socketId:socketId};
-    userOnlineList.push(user);
+    newUser.socketId = socketId;
+    userOnlineList.push(newUser);
   }
 }
 
@@ -167,8 +168,8 @@ io.on('connection', function(socket) {
   console.log('new socket connect');
 
   socket.on('join', function(data) {
-    var {userId,userType,userFriends} = data;
-    addNewUser(userId,userType,socket.id);
+    var {userId,userFriends} = data;
+    addNewUser(data,socket.id);
     console.log('userFriends',userFriends);
     var userOnlineList = getListUserOnline(userFriends);
     // Tra ve thua socket id
@@ -177,7 +178,7 @@ io.on('connection', function(socket) {
     // Thong bao cho tat ca friend
     userOnlineList.forEach(friend => {
       if(friend && friend.socketId){
-        io.to(friend.socketId).emit('friend-online',{userId:userId,userType:userType});
+        io.to(friend.socketId).emit('friend-online',data);
       }else{
         console.log('ERRROR FRIEND:'+userId);
       }

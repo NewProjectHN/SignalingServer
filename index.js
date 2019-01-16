@@ -112,6 +112,7 @@ function addNewUser(newUser,socketId){
   }
   if(!isFound){
     newUser.socketId = socketId;
+    newUser.active = true;
     userOnlineList.push(newUser);
   }
 }
@@ -139,11 +140,18 @@ function removeUserBySocket(socketId){
 function getListUserOnline(userFriends){
   var lstUserOnline = [];
   for(var i = 0;i < userFriends.length;i++){
+    var isFound = false;
     for(var j= 0;j< userOnlineList.length;j++){
       if(userOnlineList[j].userId == userFriends[i].userId &&
             userOnlineList[j].userType == userFriends[i].userType){
+        isFound = true;
+        userOnlineList[j].active = true;
         lstUserOnline.push(userOnlineList[j]);
       }
+    }
+    if(!isFound){
+      userFriends[i].active = false;
+      lstUserOnline.push(userFriends[i]);
     }
   }
   return lstUserOnline;
@@ -178,7 +186,9 @@ io.on('connection', function(socket) {
     // Thong bao cho tat ca friend
     userOnlineList.forEach(friend => {
       if(friend && friend.socketId){
-        io.to(friend.socketId).emit('friend-online',data);
+        if(friend.active == true){
+          io.to(friend.socketId).emit('friend-online',data);
+        }
       }else{
         console.log('ERRROR FRIEND:'+userId);
       }
@@ -323,6 +333,7 @@ function addNewFriend(socket,users){
       mapFriendOnline[socketUser.usreId] = mapFriendOnline;
 
       io.to(user.socketId).emit('friend-online',socketUser);
+      user.active = true;
       userOnlineList.push(user)
     }
   }

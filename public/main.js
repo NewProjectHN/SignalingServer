@@ -210,7 +210,9 @@ app.controller('myCtrl', function($scope,$http) {
         for(var j = 0; j < userFriends.length;j++){
           if(userFriends[j].userId == friendOnlineList[i].userId &&
               userFriends[j].userType == friendOnlineList[i].userType){
-              userFriends[j].active = true;
+                if( friendOnlineList[i].active == true){
+                  userFriends[j].active = true;
+                }
           }
         }
       }

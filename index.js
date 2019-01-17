@@ -335,6 +335,9 @@ function addNewFriend(socket,users){
       io.to(user.socketId).emit('friend-online',socketUser);
       user.active = true;
       userOnlineList.push(user)
+    }else{
+      users[i].active = false;
+      userOnlineList.push(users[i]);
     }
   }
 

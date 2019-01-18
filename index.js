@@ -333,8 +333,8 @@ function addNewFriend(socket,users){
       mapFriendOnline[socketUser.usreId] = mapFriendOnline;
 
       io.to(user.socketId).emit('friend-online',socketUser);
-      user.active = true;
-      userOnlineList.push(user)
+      users[i].active = true;
+      userOnlineList.push(users[i]);
     }else{
       users[i].active = false;
       userOnlineList.push(users[i]);

@@ -362,8 +362,7 @@ app.controller('myCtrl', function($scope,$http) {
       $scope.isLogin = true;
       
       let config = {'socketURL':SERVER_URL};
-        let user = {userId:$scope.userId,userType:$scope.userType,userFriends:userFriends};
-        user.teststring = '1234123'+$scope.userId;
+        let user = {userId:$scope.userId,userType:$scope.userType,userFriends:[]};
         let callback = {
           getFriendOnlineCB:$scope.getFriendOnlineCB,//Khi co danh sach ban online tra ve
           newFriendOnlineCB:$scope.newFriendOnlineCB,//khi co them 1 user online
@@ -379,8 +378,11 @@ app.controller('myCtrl', function($scope,$http) {
         };
         createSocketRTC(config,user,callback);
 
-        let friendTest = [{"speciality":{"id":"3","name":"Sản phụ khoa, Nam khoa"},"education":"Thạc Sĩ","name":"Nguyễn Văn B","age":11,"isonline":false,"description":"Đây là mô tả","avata":"/temp/upload_19377a5d0fcd439ce2cee3964abd5995.jpg","email":"doctortest2@gmail.com","phone":"12345","password":"doctor2","birthday":1543622400000,"training_process":"Null","working_process":"Null","degree_name":"Tiến Sĩ","department_name":"Phòng khám tự nguyện","day_off":"Null","position_name":"Trưởng khoa","certificate":"Null","experience":"Null","academic_rank_name":"Phó giáo sư","home_town":"Null","birthplace":"Null","organization":"Null","research_work":"Null","place":"Phòng A1","disease_name":"tiêu hóa, gan mật","language_name":"Null","doctor_id":"wjbFmWYBOMOzM1zlQthy","userId":"wjbFmWYBOMOzM1zlQthy","userType":0}];
-        addNewFriend(friendTest);
+        // let friendTest = [{"speciality":{"id":"3","name":"Sản phụ khoa, Nam khoa"},"education":"Thạc Sĩ","name":"Nguyễn Văn B","age":11,"isonline":false,"description":"Đây là mô tả","avata":"/temp/upload_19377a5d0fcd439ce2cee3964abd5995.jpg","email":"doctortest2@gmail.com","phone":"12345","password":"doctor2","birthday":1543622400000,"training_process":"Null","working_process":"Null","degree_name":"Tiến Sĩ","department_name":"Phòng khám tự nguyện","day_off":"Null","position_name":"Trưởng khoa","certificate":"Null","experience":"Null","academic_rank_name":"Phó giáo sư","home_town":"Null","birthplace":"Null","organization":"Null","research_work":"Null","place":"Phòng A1","disease_name":"tiêu hóa, gan mật","language_name":"Null","doctor_id":"wjbFmWYBOMOzM1zlQthy","userId":"wjbFmWYBOMOzM1zlQthy","userType":0}];
+        // if($scope.userType == 0){
+          console.log('11111111111111111111111111111');
+          addNewFriend(userFriends);
+        // }
     }
 
     $scope.callFriend = function(friend){

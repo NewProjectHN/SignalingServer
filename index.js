@@ -45,7 +45,7 @@ app.use('/api', router);
 // Danh sach user online
 var userOnlineList = [];//{userId:1,socketId:2,userType:0}.1:Benh nhan, 0:bacsy
 // Chatroom
-var mapFriendOnline = {}; //store all friend online of user
+var mapFriend = {}; //store all friend of user
 var mapMissCall = {};// luu cac cuoc goi nho cua user
 var mapMissMsg = {}; // luu cac tin nhan lo cua user
 app.use(function(req, res, next) {
@@ -57,12 +57,6 @@ app.use(function(req, res, next) {
 app.use(express.static(path.join(__dirname, 'public')));
 
 
-// function getUserBySocketId(socketId){
-//   var token = mapSocketIdToken[socketId];
-//   var user = mapToken[token];
-//   return getUserActiveByUser(user);
-// }
-//
 function getUserActiveByUser(user){
   var userOnline = null;
   if(user){
@@ -75,6 +69,16 @@ function getUserActiveByUser(user){
     }
   }
   return userOnline;
+}
+
+function getUserBySocketId(socketId){
+  for(var i = 0;i < userOnlineList.length;i++){
+    if(userOnlineList[i].socketId == socketId){
+       return userOnlineList[i];
+    }
+  }
+
+  return null;
 }
 
 router.post('/sendMsgToUser', function(req, res) {
@@ -112,19 +116,8 @@ function addNewUser(newUser,socketId){
   }
   if(!isFound){
     newUser.socketId = socketId;
-    newUser.active = true;
     userOnlineList.push(newUser);
   }
-}
-
-function getUserBySocketId(socketId){
-  for(var i = 0;i < userOnlineList.length;i++){
-    if(userOnlineList[i].socketId == socketId){
-       return userOnlineList[i];
-    }
-  }
-
-  return null;
 }
 
 function removeUserBySocket(socketId){
@@ -139,21 +132,17 @@ function removeUserBySocket(socketId){
 
 function getListUserOnline(userFriends){
   var lstUserOnline = [];
-  for(var i = 0;i < userFriends.length;i++){
-    var isFound = false;
-    for(var j= 0;j< userOnlineList.length;j++){
-      if(userOnlineList[j].userId == userFriends[i].userId &&
-            userOnlineList[j].userType == userFriends[i].userType){
-        isFound = true;
-        userOnlineList[j].active = true;
-        lstUserOnline.push(userOnlineList[j]);
+  if(userFriends){
+    for(var i = 0;i < userFriends.length;i++){
+      for(var j= 0;j< userOnlineList.length;j++){
+        if(userOnlineList[j].userId == userFriends[i].userId &&
+              userOnlineList[j].userType == userFriends[i].userType){
+          lstUserOnline.push(userOnlineList[j]);
+        }
       }
     }
-    if(!isFound){
-      userFriends[i].active = false;
-      lstUserOnline.push(userFriends[i]);
-    }
   }
+  
   return lstUserOnline;
 }
 
@@ -171,22 +160,51 @@ function exchange(socket,data){
   }
 }
 
+/**
+ * Lay ve danh sach cac user online co ban la user dau vao
+ */
+function getAllFriendOnlineOfUser(userId,userType){
+  var userFriends = mapFriend[userId + '_' + userType];
+  var userOnlineList = getListUserOnline(userFriends);
+  var userFriendIdList = Object.keys(mapFriend);
+  userFriendIdList.forEach(userTmpID => {
+    userArr = userTmpID.split('_');
+    var userSearch = {userId: userArr[0],userType: userArr[1]};
+    if(userId != userSearch.userId && userType != userSearch.userType){
+      var userFriendAllList = mapFriend[userTmpID];
+      userFriendAllList.forEach(userFriend => {
+        if(userFriend.userId == userId && userFriend.userType == userType){
+          userSearch = getUserActiveByUser(userSearch);
+          if(userSearch){
+            userOnlineList.push(userSearch);
+          }
+        }
+      })
+    }
+  
+  })
+  console.log('userId',userId);
+  console.log('useronlinelist',userOnlineList);
+  return userOnlineList;
+}
+
 io.on('connection', function(socket) {
 
   console.log('new socket connect');
 
   socket.on('join', function(data) {
-    var {userId,userFriends} = data;
+    data.userFriends = [];
+    var {userId,userType,userFriends} = data;
     addNewUser(data,socket.id);
-    console.log('userFriends',userFriends);
-    var userOnlineList = getListUserOnline(userFriends);
     // Tra ve thua socket id
-    mapFriendOnline[userId] = userOnlineList;
-    console.log('useronlinelist',userOnlineList);
+    mapFriend[userId + '_' + userType] = userFriends;
+    // Kiem tra lai danh sach ban be online co user nay thi gui them vao
+    var userOnlineList = getAllFriendOnlineOfUser(userId,userType);
+ 
     // Thong bao cho tat ca friend
     userOnlineList.forEach(friend => {
       if(friend && friend.socketId){
-        if(friend.active == true){
+        if(friend.socketId){
           io.to(friend.socketId).emit('friend-online',data);
         }
       }else{
@@ -205,7 +223,7 @@ io.on('connection', function(socket) {
         missMsgList.push(e);
       })
     }
-    io.to(socket.id).emit('init-data-friend',{friendOnlineList: userOnlineList,missCallList:missCallList,missMsgList:missMsgList});
+    // io.to(socket.id).emit('init-data-friend',{friendOnlineList: userOnlineList,missCallList:missCallList,missMsgList:missMsgList});
     mapMissCall[userId] = [];
     mapMissMsg[userId] = [];
     // if(fn){
@@ -218,11 +236,14 @@ io.on('connection', function(socket) {
   socket.on('disconnect', function() {
     var user = getUserBySocketId(socket.id);
     if(user){
-      var friendOnline = mapFriendOnline[user.userId];
-      if(friendOnline){
-          for(var i = 0 ;i < friendOnline.length;i++){
-            var friendOnline = friendOnline[i];
-            io.to(friendOnline.socketId).emit("friend-disconnect",user);
+      var userOnlineOfUserList = getAllFriendOnlineOfUser(user.userId,user.userType);
+      if(userOnlineOfUserList){
+          for(var i = 0 ;i < userOnlineOfUserList.length;i++){
+            var friendUser = userOnlineOfUserList[i];
+            if(friendUser.socketId){
+              io.to(friendUser.socketId).emit("friend-disconnect",user);
+            }
+            
           }
       }
     }
@@ -317,27 +338,51 @@ function sendMsgFromTo(fromUser,toUser,msg){
 function addNewFriend(socket,users){
 
   var userOnlineList = [];
-  for(var i = 0;i < users.length;i++){
-    var user = users[i];
-    user = getUserActiveByUser(user);
-    var socketUser = getUserBySocketId(socket.id);
-    // Trong truong hop ban moi add online thi gui phan hoi lai
-    if(user && socketUser){
-      //add them vao danh sach ban be
-      var tmpListOnline = mapFriendOnline[user.userId];
-      tmpListOnline.push(socketUser);
-      mapFriendOnline[user.userId] = tmpListOnline;
+  var socketUser = getUserBySocketId(socket.id);
 
-      tmpListOnline = mapFriendOnline[socketUser.userId];
-      tmpListOnline.push(user);
-      mapFriendOnline[socketUser.usreId] = mapFriendOnline;
+  if(socketUser){
+    var id = socketUser.userId + '_' + socketUser.userType;
+    for(var i = 0;i < users.length;i++){
+      var user = users[i];
+     
+      // Trong truong hop ban moi add online thi gui phan hoi lai
+      
+      var friendAllList = mapFriend[id];
+      var isFound = false;
+      if(friendAllList){
+        for(var j = 0; j < friendAllList.length;j++){
+          var friend = friendAllList[j];
+          if(friend.userId == user.userId && friend.userType == user.userType){
+            isFound = true;
+            friendAllList[j] = user;
+          }
+        }
+      }else{
+        friendAllList = [];
+      }
+      if(!isFound){
+        friendAllList.push(user);
+      }
 
-      io.to(user.socketId).emit('friend-online',socketUser);
-      users[i].active = true;
-      userOnlineList.push(users[i]);
-    }else{
-      users[i].active = false;
-      userOnlineList.push(users[i]);
+      mapFriend[socketUser.userId + '_' + socketUser.userType] = friendAllList;
+
+      let userActive = getUserActiveByUser(user);
+      if(userActive){
+        users[i].active = true;
+      }else{
+        users[i].active = false;
+      }
+      userOnlineList.push(users[i])
+    }
+  
+    // Thong bao cho tat ca user la ban khi user online
+    var allFriendOnlineList = getAllFriendOnlineOfUser(socketUser.userId,socketUser.userType);
+    if(allFriendOnlineList){
+      allFriendOnlineList.forEach(friend => {
+        if(friend.socketId){
+          io.to(friend.socketId).emit('friend-online',socketUser);
+        }   
+      })
     }
   }
 

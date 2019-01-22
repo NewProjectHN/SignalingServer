@@ -193,6 +193,7 @@ io.on('connection', function(socket) {
   console.log('new socket connect');
 
   socket.on('join', function(data) {
+    
     data.userFriends = [];
     var {userId,userType,userFriends} = data;
     addNewUser(data,socket.id);
@@ -201,6 +202,7 @@ io.on('connection', function(socket) {
     // Kiem tra lai danh sach ban be online co user nay thi gui them vao
     var userOnlineList = getAllFriendOnlineOfUser(userId,userType);
  
+    console.log('JOIN JOIN',userOnlineList);
     // Thong bao cho tat ca friend
     userOnlineList.forEach(friend => {
       if(friend && friend.socketId){
@@ -337,10 +339,13 @@ function sendMsgFromTo(fromUser,toUser,msg){
 
 function addNewFriend(socket,users){
 
+  console.log('addNewFriend - users',users);
+
   var userOnlineList = [];
   var socketUser = getUserBySocketId(socket.id);
 
   if(socketUser){
+    console.log('addNewFriend - socketUser',socketUser);
     var id = socketUser.userId + '_' + socketUser.userType;
     for(var i = 0;i < users.length;i++){
       var user = users[i];
@@ -377,6 +382,8 @@ function addNewFriend(socket,users){
   
     // Thong bao cho tat ca user la ban khi user online
     var allFriendOnlineList = getAllFriendOnlineOfUser(socketUser.userId,socketUser.userType);
+
+    console.log('addNewFriend -all',allFriendOnlineList);
     if(allFriendOnlineList){
       allFriendOnlineList.forEach(friend => {
         if(friend.socketId){
@@ -386,6 +393,7 @@ function addNewFriend(socket,users){
     }
   }
 
+  console.log('addNewFriend - online',userOnlineList);
   io.to(socket.id).emit('init-data-friend',{friendOnlineList: userOnlineList});
 }
 
